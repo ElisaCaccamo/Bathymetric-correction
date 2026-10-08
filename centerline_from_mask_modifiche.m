@@ -227,7 +227,7 @@ if nnz(Iskel_clean) == 0
     % componente più grande effettivamente presente.
     cc = bwconncomp(Iskel);
     if cc.NumObjects == 0
-        warning('centerline_from_mask: scheletro completamente vuoto anche prima della pulizia (W*5=%d px). Maschera probabilmente non valida.', W*5);
+        warning('centerline_from_mask: scheletro completamente vuoto anche prima della pulizia (W*5=%d px). Maschera probabilmente non valida.', W_px*5);
         cl = [];
         Icl = false(sizeIo);
         return
