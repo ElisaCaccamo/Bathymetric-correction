@@ -7,7 +7,7 @@ function [W_bf, left_pt, right_pt, A_bf] = W_bankfull_from_dtm( ...
 % z_rect_all         : vector [n x 1] riverbed elevation
 % h_bf               : bankfull water depth for section i [m]
 % Xgrid, Ygrid, Z    : DTM grid compatible with interp2
-% all_centerlines    : [N x 5] id, x, y, z (free surface), width_old
+% all_centerlines    : [N x 6] id, x, y, z (free surface), width_old, segment code
 % opts               : struct with optional fields
 %      - ds              : sampling step along the transect (m)
 %      - max_half_len    : (default 100) max half-length of the transect (m)
@@ -15,9 +15,47 @@ function [W_bf, left_pt, right_pt, A_bf] = W_bankfull_from_dtm( ...
 %      - h_bf_all         : (optional vector) bankfull depths already computed,
 %                           used as fallback for the previous section
 %      - verbose          : (default false) print diagnostics
+%      - W_old_rule       : (default 'max') what to do when W_bf < W_old
+%                           (width from the mask at the LiDAR flow):
+%                           'max'  -> W_bf = W_old (bankfull width cannot be
+%                                     smaller than the wetted width)
+%                           'nan'  -> W_bf = NaN
+%                           'none' -> keep W_bf
 %
 % OUTPUTS:
 %  W_bf [1x1], A_bf [1x1], left_pt (x,y) [1x2], right_pt (x,y) [1x2]
+%
+% NB: Z must be the bathymetry-corrected DTM: z_target and the area are
+% referred to the riverbed z_rect_all, while in the raw LiDAR DTM the wet
+% area contains the water surface.
+
+[W_bf, left_pt, right_pt, A_bf] = bankfull_core(i, z_rect_all, h_bf, ...
+    Z, Xgrid, Ygrid, all_centerlines, opts);
+
+% --- conservative rule W_bf >= W_old, applied the same way on every path ---
+W_old_i = all_centerlines(i, 5);
+if ~isfinite(W_old_i) || W_old_i <= 0
+    return
+end
+W_old_rule = 'max';
+if isfield(opts, 'W_old_rule') && ~isempty(opts.W_old_rule)
+    W_old_rule = lower(opts.W_old_rule);
+end
+if isfinite(W_bf) && W_bf < W_old_i
+    switch W_old_rule
+        case 'max'
+            warning('Section %d: W_bf = %.2f m < W_old = %.2f m -> W_bf = W_old.', i, W_bf, W_old_i);
+            A_bf = A_bf * W_old_i / W_bf;   % same equivalent depth A_bf/W_bf
+            W_bf = W_old_i;
+        case 'nan'
+            warning('Section %d: W_bf = %.2f m < W_old = %.2f m -> NaN.', i, W_bf, W_old_i);
+            W_bf = NaN;
+    end
+end
+end
+
+function [W_bf, left_pt, right_pt, A_bf] = bankfull_core(i, z_rect_all, h_bf, ...
+    Z, Xgrid, Ygrid, all_centerlines, opts)
 
 % --- default outputs (used only if every path below fails) ---
 W_bf = NaN;
@@ -28,7 +66,16 @@ A_bf = NaN;
 x_coords = all_centerlines(:, 2);
 y_coords = all_centerlines(:, 3);
 W_old = all_centerlines(:, 5);
+W_old(W_old <= 0) = NaN;   % missing widths are stored as 0 in all_centerlines
 N = numel(x_coords);
+% segment code: neighbours are taken only inside the same river segment
+if size(all_centerlines, 2) >= 6
+    seg = all_centerlines(:, 6);
+else
+    seg = ones(N, 1);
+end
+same_prev = i > 1 && seg(i-1) == seg(i);
+same_next = i < N && seg(i+1) == seg(i);
 ds = opts.ds;
 max_half = opts.max_half_len;
 interp_method = opts.interp_method;
@@ -47,15 +94,21 @@ ht = h_bf;
 z_target = z_rect_all(i) + ht;
 
 % --- tangent / normal to the centerline ---
-if i == 1
+% Central difference inside the same segment; one-sided at the segment ends
+% (bifurcation nodes are the LAST point of the mother segment and the FIRST
+% point of the branches: rows i-1/i+1 there belong to other segments).
+if same_prev && same_next
+    dx_t = x_coords(i+1) - x_coords(i-1);
+    dy_t = y_coords(i+1) - y_coords(i-1);
+elseif same_next
     dx_t = x_coords(i+1) - xc;
     dy_t = y_coords(i+1) - yc;
-elseif i == N
+elseif same_prev
     dx_t = xc - x_coords(i-1);
     dy_t = yc - y_coords(i-1);
 else
-    dx_t = x_coords(i+1) - x_coords(i-1);
-    dy_t = y_coords(i+1) - y_coords(i-1);
+    warning('Section %d: single-point segment, centerline direction undefined.', i);
+    return;
 end
 tvec = [dx_t, dy_t];
 if norm(tvec) == 0
@@ -306,7 +359,7 @@ if area_section <= 0
     if verbose
         fprintf('ht (h_bf) = %.3f m, current z_target = %.3f\n', ht, z_target);
     end
-    if i > 1
+    if same_prev
         z_target_prev = NaN;
         if ~isempty(h_bf_all) && numel(h_bf_all) >= i-1 && ~isnan(h_bf_all(i-1))
             ht_prev = h_bf_all(i-1);
@@ -322,20 +375,15 @@ if area_section <= 0
             fprintf('z_target_prev = %.3f (%s), area_prev = %.3f\n', z_target_prev, info_str, area_prev);
         end
 
-        if area_prev > 0
+        if area_prev > 0 && z_target_prev > z_rect_all(i)
+            % equivalent rectangular width: area / depth of z_target_prev
+            % above the bed of THIS section (W_old rule applied by the caller)
             area_section = area_prev;
-            W_from_area = area_section / ht;
-            if ~isnan(W_old(i)) && (W_from_area < W_old(i))
-                W_bf = NaN;
-                warning('Section %d: W_from_area fallback (%.2f m) < W_old (%.2f m) -> NaN', i, W_from_area, W_old(i));
-                return;
-            else
-                W_bf = W_from_area;
-                left_pt = [xL, yL];
-                right_pt = [xR, yR];
-                A_bf = area_section;
-                return;
-            end
+            W_bf = area_section / (z_target_prev - z_rect_all(i));
+            left_pt = [xL, yL];
+            right_pt = [xR, yR];
+            A_bf = area_section;
+            return;
         end
         % previous-area fallback also failed -> use W_old
         if ~isnan(W_old(i))
@@ -350,23 +398,23 @@ if area_section <= 0
             return;
         end
     else
-        warning('Section %d: non-positive area at i==1, no previous section available -> skip', i);
+        warning('Section %d: non-positive area and no previous section in the same segment -> skip', i);
         return;
     end
 end
 
-% --- NORMAL PATH (area_section > 0): this used to be unreachable due to a
-%     missing 'end' in the original file. Fixed here. ---
-W_from_area = area_section / ht;
+% --- NORMAL PATH (area_section > 0) ---
+% Equivalent rectangular width = area / depth. The depth is the one of the
+% z_target actually used: if z_target was clamped to the profile maximum,
+% the area refers to that lower level, not to the original h_bf.
+ht_eff = z_target - z_rect_all(i);
+if ht_eff <= 0
+    warning('Section %d: z_target (%.3f) not above the bed (%.3f) -> skip', i, z_target, z_rect_all(i));
+    return;
+end
+W_from_area = area_section / ht_eff;
 W_bf = W_from_area;
 left_pt = [xL, yL];
 right_pt = [xR, yR];
 A_bf = area_section;
-
-% Optional conservative rule (uncomment to enforce W_bf >= W_old):
-% if ~isnan(W_old(i)) && (W_from_area < W_old(i))
-%     W_bf = NaN;
-%     warning('Section %d: W_from_area (%.2f m) < W_old (%.2f m) -> NaN', i, W_from_area, W_old(i));
-% end
-
 end
