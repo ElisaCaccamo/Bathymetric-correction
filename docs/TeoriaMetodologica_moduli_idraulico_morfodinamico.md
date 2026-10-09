@@ -208,8 +208,6 @@ Le larghezze dei rami nella sezione di imbocco possono quindi differire da quell
 
 > **[Figura]** *Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo.*
 > *(immagine non inclusa nella versione testuale del documento originale)*
->
-> **TODO (Elisa):** l'immagine è solo nel `.docx` originale. Caricarla come PNG in `docs/fig/` (oppure passarla a Claude), poi sostituire questo segnaposto con `![Sezione rettangolarizzata al nodo](fig/nodo_bankfull.png)`.
 
 Il pannello a mostra come la sezione madre diventa un rettangolo di pari area $A_0$ al livello bankfull, mentre $W_0^m$ è misurata al livello del volo. Il pannello b è il nodo risolto in bankfull, con pelo libero comune e tiranti $D_1$, $D_2$ incogniti. Il pannello c riporta i rami alle condizioni del volo: larghezze ridotte dello stesso fattore, fondi invariati, portate ripartite con $\psi$.
 
@@ -439,11 +437,9 @@ Nella realtà, a poche decine di metri dal nodo, la pendenza del pelo libero di 
 
 **Scelte di metodo.**
 
-- **A. Pendenza del nodo su una finestra di lunghezza fissa** *(proposta principale)*. Per la madre la pendenza si calcola sul pelo libero $z_{DTM}$ di un tratto di lunghezza $L$ a monte del nodo, per ciascun ramo su un tratto di lunghezza $L$ a valle, attraversando se necessario i confini tra tratti (la topologia è nota). $L$ fissa per tutta la rete, ad esempio 300–500 m, oppure proporzionale alla larghezza, $L=k\,W_0^m$ con $k\approx10$. Le pendenze restano "dal DTM" (§2.2) ma sono stimate su una scala confrontabile per madre e rami. Il calcolo nel resto della rete non cambia.
+- **A. Pendenza del nodo su una finestra di lunghezza fissa**. Per la madre la pendenza si calcola sul pelo libero $z_{DTM}$ di un tratto di lunghezza $L$ a monte del nodo, per ciascun ramo su un tratto di lunghezza $L$ a valle, attraversando se necessario i confini tra tratti (la topologia è nota). $L$ fissa per tutta la rete, ad esempio 300–500 m, oppure proporzionale alla larghezza, $L=k\,W_0^m$ con $k\approx10$. Le pendenze restano "dal DTM" (§2.2) ma sono stimate su una scala confrontabile per madre e rami. Il calcolo nel resto della rete non cambia.
 - **B. Sostituire il valore minimo.** Quando la regressione dà $S\le1.6\cdot10^{-4}$ o il tratto è troppo corto, si usa la pendenza del tratto a monte (o a valle) o quella della finestra A, invece di $1.6\cdot10^{-4}$. Da applicare comunque, anche con A.
-- **C. Pendenza unica del nodo** *(test di sensibilità)*. $S_0=S_1=S_2=S_{nodo}$, ad esempio la pendenza della finestra centrata sul nodo. La ripartizione dipende allora solo da larghezze e composizione: è un limite inferiore dell'effetto delle pendenze, utile per capire quanto la soluzione dipende da esse, ma rinuncia all'informazione sulla diversa pendenza dei rami.
-
-Impatto sul documento: §2.2 (definizione della pendenza ai nodi).
+- **C. Modificare il valore di ripiego $1.6\cdot10^{-4}$.** Il minimo imposto nel pre-processing quando la regressione dà pendenza nulla o negativa si sostituisce con un valore scelto sui dati dell'Orco, ad esempio un percentile basso (5–10%) delle pendenze valide della rete o la pendenza media del corso d'acqua. Poiché $D\approx0.005\ \text{m}/S$, il valore di ripiego fissa direttamente il tirante massimo: con $S=10^{-3}$ si ottiene $D\approx5$ m invece di 31 m. È la modifica più semplice, ma resta un valore unico per tutta la rete e non corregge la differenza di pendenza tra madre e rami.
 
 ### 7.3 Tirante bankfull di Shields superiore all'altezza delle sponde
 
@@ -464,9 +460,6 @@ D_{bf} = \min\left(D_{Shields},\; z_{sfioro}-\eta\right)
 $$
 Shields resta il riferimento teorico, la geometria lo limita. Con $D_{bf}$ si calcolano $W^{bf}$, $Q^{bf}$ e lo Shields bankfull effettivo $\theta_{bf}=D_{bf}S/(\Delta d_{50})$, da riportare per controllo.
 - **B. Calibrare $\theta^*_{BF}$ sull'Orco.** Si stima $\theta^*_{BF}$ nelle sezioni a canale singolo con sponde ben definite (dove il livello di sfioro è chiaro) e si usa quel valore in tutta la rete al posto di $1.62\,\theta^*_c$. Mantiene un criterio unico, ma richiede di scegliere le sezioni di taratura.
-- **C. Lasciare il criterio di Shields e segnalare i nodi con clamp** come non risolvibili. È la situazione attuale: i nodi vanno nel ripiego.
-
-Impatto sul documento: §4.3 (definizione del tirante bankfull).
 
 ### 7.4 Larghezze bankfull non calcolabili
 
@@ -496,8 +489,6 @@ Molti di questi casi dovrebbero sparire risolvendo §7.2 e §7.3.
 **Scelte di metodo.**
 
 - **A.** Rivalutare dopo aver risolto §7.2 e §7.3: con pendenze e tiranti coerenti il problema potrebbe sparire.
-- **B. Continuazione sulle pendenze.** Si risolve prima il nodo con pendenza unica (§7.2 C), poi si portano gradualmente $S_1$, $S_2$ ai valori reali usando ogni soluzione come punto di partenza della successiva. Se a un certo passo la soluzione si perde (un ramo si chiude), quello è il limite fisico del modello per quel nodo.
-- **C. Ramo che si chiude** ($q_2\le0$, come in 106). Il modello dice che, a quelle pendenze, l'equilibrio bankfull ha un solo ramo attivo, ma il ramo è bagnato il giorno del volo. Va deciso se trattarlo come esito fisico (ramo inattivo a bankfull, ripartizione da un altro criterio alle condizioni del volo) o come segnale di pendenze non affidabili.
 
 ### 7.6 Ripiego attuale
 
@@ -513,13 +504,21 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 
 | # | Decisione | Proposta |
 | --- | --- | --- |
-| 1 | Pendenza ai nodi (§7.2) | Finestra di lunghezza fissa $L$ per madre e rami (A) + sostituzione del valore minimo (B); pendenza unica (C) come test di sensibilità |
-| 2 | Valore di $L$ | 300–500 m, oppure $L=10\,W_0^m$ |
-| 3 | Tirante bankfull (§7.3) | $D_{bf}=\min(D_{Shields},\,z_{sfioro}-\eta)$ (A) |
-| 4 | Larghezze non calcolabili (§7.4) | $W^{bf}=W^m$ (A); area sul semi-transetto ×2 con sponde specchiate (B) |
-| 5 | Ramo che si chiude (§7.5 C) | Da decidere dopo aver applicato 1–3 |
+| 1 | Pendenza ai nodi (§7.2) | Modificare il valore di ripiego $1.6\cdot10^{-4}$ (C): sostituirlo con un valore scelto sui dati dell'Orco (percentile basso, 5–10%, delle pendenze valide della rete, o pendenza media del corso d'acqua). Il valore fissa il tirante massimo ($S=10^{-3}\Rightarrow D\approx5$ m invece di 31 m). È la modifica più semplice, ma resta un valore unico per tutta la rete e non corregge la differenza di pendenza tra madre e rami |
+| 2 | Tirante bankfull (§7.3) | Da decidere |
+| 3 | Larghezze non calcolabili (§7.4) | Da decidere |
+| 4 | Ramo che si chiude a bankfull (§7.1, nodo 106) | Da decidere |
 
-L'ordine consigliato è 1 → 3 → 4, rieseguendo dopo ogni passo la tabella diagnostica di §7.1 per vedere quanti nodi passano da ripiego a soluzione.
+---
+
+## 8. Domande per Carlo
+
+1. Al nodo, la pendenza di madre e rami si può calcolare su una finestra di lunghezza fissa $L$ invece che con la regressione sull'intero tratto (§7.2 A)? Se sì, con quale $L$?
+2. Quando la regressione dà una pendenza nulla o negativa, è meglio usare la pendenza del tratto adiacente (§7.2 B) o modificare il valore di ripiego $1.6\cdot10^{-4}$ (§7.2 C)? In questo secondo caso, con quale criterio va scelto il nuovo valore?
+3. Il tirante bankfull di Shields ($\theta^*_{BF}=1.62\,\theta^*_c$) supera l'altezza delle sponde in molti tratti a canali multipli. È meglio limitarlo con il livello di sfioro del transetto (§7.3 A) o calibrare $\theta^*_{BF}$ sull'Orco (§7.3 B)?
+4. Quando la larghezza bankfull non è calcolabile, si può usare quella della maschera e, se si trova una sola sponda, calcolare l'area sul semi-transetto e raddoppiarla (§7.4)?
+5. Se a bankfull un ramo si chiude ($q_2\le0$, nodo 106) ma è bagnato il giorno del volo, va considerato un risultato fisico o un segnale di dati in ingresso non affidabili?
+6. Per i nodi che restano non risolti, è accettabile la ripartizione proporzionale alle larghezze (§7.6), dichiarando nei risultati che lì le quote di fondo sono idrauliche e non morfodinamiche?
 
 ---
 
