@@ -184,7 +184,7 @@ for k = pairs
 end
 zero_idx = find(abs(D_valid) < tol);
 if ~isempty(zero_idx)
-    cross_positions = unique([cross_positions, s_valid(zero_idx)']);
+    cross_positions = unique([cross_positions(:); reshape(s_valid(zero_idx), [], 1)])';   % both as columns, result as row
     fallback_code(i) = 1;
 end
 
@@ -216,7 +216,7 @@ if isempty(cross_positions)
         end
         zero_idx_try = find(abs(D_try) < tol);
         if ~isempty(zero_idx_try)
-            cross_positions = unique([cross_positions, s_valid(zero_idx_try)']);
+            cross_positions = unique([cross_positions(:); reshape(s_valid(zero_idx_try), [], 1)])';
         end
         if ~isempty(cross_positions)
             z_target = z_target_try; % accept clamped target going forward
