@@ -384,9 +384,147 @@ La differenza chiave è nel nodo di biforcazione: il modulo idraulico ripartisce
 
 ---
 
+## 7. Questioni aperte
+
+Questa sezione raccoglie i problemi emersi applicando il modulo morfodinamico (`2_ORCO_bifurcationsNEW_modifiche.mlx`) ai dati dell'Orco del volo LiDAR del 17/03/2025 ($Q=10.8$ m³/s a San Benigno). Il codice è coerente con le sezioni 4–5 e conserva portata liquida e flussi solidi a tutti i nodi, ma **nessuna delle 12 biforcazioni viene risolta con il sistema nodale**: in tutte interviene il ripiego (ripartizione proporzionale alle larghezze, §7.6). Le cause sono nei dati in ingresso al nodo, non nelle equazioni: per ciascuna si descrive cosa succede, dove, perché, e le scelte di metodo possibili.
+
+### 7.1 Stato dei nodi
+
+Valori stampati dalla tabella diagnostica del modulo morfodinamico (sezione 5 dello script). $D_{0}$, $D_{1,s}$, $D_{2,s}$ sono i tiranti di Shields $\theta^*_{BF}\Delta d_{50}/S$ della madre e dei rami; $W_0^m$ è la larghezza della maschera, $W_0^{bf}$ quella bankfull dal DTM; `exit` è il codice di uscita di `fsolve`.
+
+| Bif | $S_0$ | $S_1$ | $S_2$ | $D_0$ (m) | $D_{1,s}$ (m) | $D_{2,s}$ (m) | $W_0^m$ (m) | $W_0^{bf}$ (m) | exit | Causa principale |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 15 | 1.6e-4 | 6.7e-4 | 2.8e-3 | 31.2 | 7.5 | 1.8 | 20 | 54.8 | −3 | $S_0$ al minimo; $W_2^{bf}$ non calcolabile |
+| 106 | 3.9e-3 | 8.8e-3 | 2.7e-3 | 1.3 | 0.6 | 1.9 | 26 | 56.3 | 3 | converge, ma $q_2<0$: $S_1/S_2=3.3$ |
+| 205 | 5.6e-4 | 4.7e-3 | 1.6e-4 | 8.9 | 1.1 | 31.2 | 36.5 | 83.4 | −3 | $S_0$ bassa, $S_2$ al minimo |
+| 244 | 1.6e-4 | 1.1e-2 | 6.8e-3 | 31.2 | 0.4 | 0.7 | 44 | 127.8 | 0 | $S_0$ al minimo; $S_1/S_0=70$ |
+| 366 | 2.8e-3 | 1.6e-4 | 5.4e-3 | 1.8 | 31.2 | 0.9 | 41.5 | 137.7 | 0 | $S_1$ al minimo; clamp con $D_0$ plausibile |
+| 469 | 5.4e-3 | 8.8e-3 | 1.2e-2 | 0.9 | 0.6 | 0.4 | 13.5 | 29.6 | −3 | pendenze dei rami 1.6–2.1 volte $S_0$ |
+| 584 | 3.2e-3 | 9.3e-3 | 8.8e-3 | 1.6 | 0.5 | 0.6 | 62 | 68.6 | 0 | rami 2.8–2.9 volte $S_0$; clamp |
+| 645 | 1.5e-3 | 2.1e-3 | 8.7e-3 | 3.3 | 2.4 | 0.6 | 32.5 | 106.6 | −3 | $S_2/S_0=5.7$; clamp |
+| 817 | 3.1e-3 | 1.6e-4 | 3.5e-3 | 1.6 | 31.2 | 1.4 | 31 | 92.2 | −3 | $S_1$ al minimo; $W_2^{bf}$ non calcolabile |
+| 1070 | 3.5e-3 | 1.1e-2 | 5.0e-3 | 1.4 | 0.4 | 1.0 | 11.5 | 74.3 | 0 | $S_1/S_0=3.2$ |
+| 1293 | 3.9e-4 | 1.8e-3 | 9.1e-3 | 12.7 | 2.8 | 0.5 | 41.5 | – | – | $S_0$ bassa; $W_0^{bf}$ non calcolabile |
+| 1369 | 1.6e-4 | 2.3e-3 | 3.3e-3 | 31.2 | 2.1 | 1.5 | 36.5 | 74.6 | −3 | $S_0$ al minimo |
+
+Quello che funziona: la portata è conservata a tutti i nodi e alle confluenze, nessuna sezione resta senza quota di fondo, e la differenza media rispetto al modulo idraulico è di 0.045 m (massimo 0.73 m). A portata del volo i flussi solidi sono dell'ordine di $10^{-16}$ m³/s, cioè praticamente nulli: è coerente con §4.3 (a portate ordinarie il grossolano è immobile) e non è un problema, perché il trasporto conta solo nel calcolo bankfull dei nodi.
+
+### 7.2 Pendenze dei tratti non rappresentative ai nodi
+
+**Cosa succede.** In 7 nodi su 12 almeno una delle tre pendenze (madre o rami) è al valore minimo $1.6\cdot10^{-4}$ (madre: 15, 244, 1369; rami: 205, 366, 817), e in 1293 la madre ha $S_0=3.9\cdot10^{-4}$. Dove le pendenze non sono al minimo, quelle di madre e rami differiscono comunque di un fattore 2–70 (244, 584, 645, 1070, 106).
+
+**Dove.** Nel pre-processing (§2.2): la pendenza di ogni tratto è la retta ai minimi quadrati $z(s)$ sull'intero tratto, limitata a $1.6\cdot10^{-4}$. Il valore minimo compare quando la retta ha pendenza nulla o negativa (tratti corti, quote disturbate, rigurgiti a ponti o confluenze) o quando il tratto ha un solo punto.
+
+**Perché crea il problema.** Le pendenze entrano nel nodo in due modi.
+
+1. Il tirante bankfull è inversamente proporzionale alla pendenza:
+$$
+D = \frac{\theta^*_{BF}\,\Delta\,d_{50}}{S} \approx \frac{0.005\ \text{m}}{S}
+\quad\Longrightarrow\quad
+S=1.6\cdot10^{-4}\ \Rightarrow\ D\approx31\ \text{m}
+$$
+Con un tirante di 9–31 m il livello bankfull supera il terreno (§7.3) e la geometria del nodo non ha più significato.
+
+2. Il nodo BRT è molto sensibile al rapporto tra le pendenze dei rami. Con il pelo libero comune i tiranti dei rami sono vicini, quindi lo sforzo $\tau=\rho g D S$ scala circa con $S$. Nel regime di basso trasporto di Wilcock-Crowe ($\zeta<1.35$):
+$$
+q_s \propto \tau^{3/2}\,\zeta^{7.5} \propto \tau^{9}
+\quad\Longrightarrow\quad
+\frac{q_{s1}}{q_{s2}} \sim \left(\frac{S_1}{S_2}\right)^{9}
+$$
+Una differenza del 10% tra $S_1$ e $S_2$ cambia il rapporto dei trasporti di un fattore 2.4; un rapporto di 3 lo cambia di un fattore $\sim 2\cdot10^4$. Con rapporti di pendenza di 3–70 le continuità solide (6)–(7) e i bilanci di cella (4)–(5) non hanno una soluzione con entrambi i rami attivi: `fsolve` non converge (exit 0 o −3, residuo $10^{0}$–$10^{5}$) oppure converge con un ramo chiuso ($q_2<0$ in 106).
+
+Nella realtà, a poche decine di metri dal nodo, la pendenza del pelo libero di madre e rami non può differire di così tanto: le differenze vengono dalla regressione su tratti di lunghezza molto diversa.
+
+**Scelte di metodo.**
+
+- **A. Pendenza del nodo su una finestra di lunghezza fissa** *(proposta principale)*. Per la madre la pendenza si calcola sul pelo libero $z_{DTM}$ di un tratto di lunghezza $L$ a monte del nodo, per ciascun ramo su un tratto di lunghezza $L$ a valle, attraversando se necessario i confini tra tratti (la topologia è nota). $L$ fissa per tutta la rete, ad esempio 300–500 m, oppure proporzionale alla larghezza, $L=k\,W_0^m$ con $k\approx10$. Le pendenze restano "dal DTM" (§2.2) ma sono stimate su una scala confrontabile per madre e rami. Il calcolo nel resto della rete non cambia.
+- **B. Sostituire il valore minimo.** Quando la regressione dà $S\le1.6\cdot10^{-4}$ o il tratto è troppo corto, si usa la pendenza del tratto a monte (o a valle) o quella della finestra A, invece di $1.6\cdot10^{-4}$. Da applicare comunque, anche con A.
+- **C. Pendenza unica del nodo** *(test di sensibilità)*. $S_0=S_1=S_2=S_{nodo}$, ad esempio la pendenza della finestra centrata sul nodo. La ripartizione dipende allora solo da larghezze e composizione: è un limite inferiore dell'effetto delle pendenze, utile per capire quanto la soluzione dipende da esse, ma rinuncia all'informazione sulla diversa pendenza dei rami.
+
+Impatto sul documento: §2.2 (definizione della pendenza ai nodi).
+
+### 7.3 Tirante bankfull di Shields superiore all'altezza delle sponde
+
+**Cosa succede.** In 13 sezioni il livello bankfull $\eta+D$ non è contenuto nel transetto di ±100 m (avviso *clamp used*): madri 15, 205, 244, 366, 584, 645, 1293, 1369 e rami 235, 377, 446, 646, 818. In quasi tutte una sola sponda viene trovata e l'altra è specchiata (*mirrored*), a 40–100 m dalla centerline. Le larghezze bankfull risultano 2–6 volte quelle della maschera (366: 137.7 m contro 41.5 m; 1070: 74.3 m contro 11.5 m; 645: 106.6 m contro 32.5 m).
+
+**Dove.** In `W_bankfull_from_dtm` (§4.3): il livello $z_{target}=\eta+D$ supera il massimo del profilo del DTM almeno su un lato, quindi viene abbassato al massimo del profilo e le sponde si cercano a quella quota.
+
+**Perché.** Due cause, che si sommano:
+
+1. pendenze piccole (§7.2), che danno $D$ di 9–31 m;
+2. anche dove $D$ è plausibile (1.4–1.8 m in 366, 584, 1070), le sponde reali sono più basse di $D$ rispetto al fondo ricostruito. Il criterio $\theta^*_{BF}=1.62\,\theta^*_c$ con $d_{50}=62$ mm è tarato su fiumi ghiaiosi a canale singolo con sponde ben definite; nei tratti a canali multipli dell'Orco le sponde dei singoli rami sono basse e a quel livello l'acqua allaga la piana.
+
+**Scelte di metodo.**
+
+- **A. Bankfull geomorfologico dal DTM** *(proposta principale)*. Sul transetto si cerca il livello di sfioro $z_{sfioro}$, cioè la quota più bassa a cui l'acqua esce dall'alveo: il minimo tra i massimi del profilo a sinistra e a destra della centerline (entro una distanza massima). Il tirante bankfull diventa
+$$
+D_{bf} = \min\left(D_{Shields},\; z_{sfioro}-\eta\right)
+$$
+Shields resta il riferimento teorico, la geometria lo limita. Con $D_{bf}$ si calcolano $W^{bf}$, $Q^{bf}$ e lo Shields bankfull effettivo $\theta_{bf}=D_{bf}S/(\Delta d_{50})$, da riportare per controllo.
+- **B. Calibrare $\theta^*_{BF}$ sull'Orco.** Si stima $\theta^*_{BF}$ nelle sezioni a canale singolo con sponde ben definite (dove il livello di sfioro è chiaro) e si usa quel valore in tutta la rete al posto di $1.62\,\theta^*_c$. Mantiene un criterio unico, ma richiede di scegliere le sezioni di taratura.
+- **C. Lasciare il criterio di Shields e segnalare i nodi con clamp** come non risolvibili. È la situazione attuale: i nodi vanno nel ripiego.
+
+Impatto sul documento: §4.3 (definizione del tirante bankfull).
+
+### 7.4 Larghezze bankfull non calcolabili
+
+**Cosa succede.** In alcune sezioni `W_bankfull_from_dtm` non restituisce una larghezza:
+
+- 41 e 1293: la sponda specchiata cade fuori dai dati del DTM (*NaN values while interpolating*);
+- 889: nessun incrocio oltre la semi-larghezza della maschera (*no crossing satisfies abs(s) ≥ halfW*);
+- 1294: area negativa e nessuna sezione precedente nello stesso tratto.
+
+**Effetto.** Nei nodi 15 e 817 manca la larghezza di un ramo e si usa $W_1=W_2=W_0/2$; nel nodo 1293 manca $W_0^{bf}$ e il sistema non viene impostato.
+
+**Perché.** Sono conseguenze dirette di §7.3 (livello troppo alto, sponde specchiate lontane) e dei bordi del DTM.
+
+**Scelte di metodo.**
+
+- **A.** Se la larghezza bankfull non è calcolabile si usa la larghezza della maschera, $W^{bf}=W^m$: è coerente con la regola $W^{bf}\ge W^m$ di §4.3 e non introduce valori arbitrari.
+- **B.** Quando una sponda è specchiata, l'area si calcola sul solo semi-transetto in cui la sponda è stata trovata e si raddoppia, invece di interpolare il profilo oltre i dati: è coerente con l'ipotesi di simmetria che sta dietro lo specchiamento.
+
+Molti di questi casi dovrebbero sparire risolvendo §7.2 e §7.3.
+
+### 7.5 Robustezza numerica del nodo
+
+**Cosa succede.** Anche nei nodi con pendenze e tiranti plausibili (469, 584, 1070) `fsolve` termina con exit −3 (non riesce più a ridurre il residuo) o 0 (numero massimo di iterazioni), con residui di 10–80.
+
+**Perché.** Con le pendenze attuali il sistema probabilmente non ha soluzione con entrambi i rami attivi (§7.2). In più il punto di partenza è sempre la biforcazione bilanciata ($q_1=q_0$, $\eta_1=\eta_0$, $f_{1F}=f_{2F}=f_{0F}$), che può essere lontano dalla soluzione quando le pendenze sono molto diverse.
+
+**Scelte di metodo.**
+
+- **A.** Rivalutare dopo aver risolto §7.2 e §7.3: con pendenze e tiranti coerenti il problema potrebbe sparire.
+- **B. Continuazione sulle pendenze.** Si risolve prima il nodo con pendenza unica (§7.2 C), poi si portano gradualmente $S_1$, $S_2$ ai valori reali usando ogni soluzione come punto di partenza della successiva. Se a un certo passo la soluzione si perde (un ramo si chiude), quello è il limite fisico del modello per quel nodo.
+- **C. Ramo che si chiude** ($q_2\le0$, come in 106). Il modello dice che, a quelle pendenze, l'equilibrio bankfull ha un solo ramo attivo, ma il ramo è bagnato il giorno del volo. Va deciso se trattarlo come esito fisico (ramo inattivo a bankfull, ripartizione da un altro criterio alle condizioni del volo) o come segnale di pendenze non affidabili.
+
+### 7.6 Ripiego attuale
+
+Quando il nodo non viene risolto, il codice:
+
+1. ripartisce portata liquida e flussi solidi in proporzione alle larghezze bankfull dei rami, o, se mancano, a quelle delle maschere ($\psi=W_1/W_0$);
+2. assegna ai rami la composizione della madre;
+3. calcola il fondo all'imbocco dei rami con il moto uniforme, come nel canale singolo.
+
+In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione geometrica), non morfodinamico. Va dichiarato nei risultati finché le questioni sopra non sono risolte: allo stato attuale le quote ai nodi del modulo morfodinamico non contengono l'effetto del bilancio di sedimento.
+
+### 7.7 Decisioni richieste
+
+| # | Decisione | Proposta |
+| --- | --- | --- |
+| 1 | Pendenza ai nodi (§7.2) | Finestra di lunghezza fissa $L$ per madre e rami (A) + sostituzione del valore minimo (B); pendenza unica (C) come test di sensibilità |
+| 2 | Valore di $L$ | 300–500 m, oppure $L=10\,W_0^m$ |
+| 3 | Tirante bankfull (§7.3) | $D_{bf}=\min(D_{Shields},\,z_{sfioro}-\eta)$ (A) |
+| 4 | Larghezze non calcolabili (§7.4) | $W^{bf}=W^m$ (A); area sul semi-transetto ×2 con sponde specchiate (B) |
+| 5 | Ramo che si chiude (§7.5 C) | Da decidere dopo aver applicato 1–3 |
+
+L'ordine consigliato è 1 → 3 → 4, rieseguendo dopo ogni passo la tabella diagnostica di §7.1 per vedere quanti nodi passano da ripiego a soluzione.
+
+---
+
 ## Registro modifiche
 
 | Data | Modifica |
 | --- | --- |
 | 09/10/2026 | Conversione da `.docx` a Markdown; equazioni ricostruite in LaTeX. |
 | 09/10/2026 | Spostato nel repo GitHub (`docs/`): da qui in poi la versione di riferimento è questa. |
+| 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte": nodi di biforcazione non risolti sui dati 2025, cause e scelte di metodo. |
