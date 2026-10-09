@@ -208,6 +208,8 @@ Le larghezze dei rami nella sezione di imbocco possono quindi differire da quell
 
 > **[Figura]** *Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo.*
 > *(immagine non inclusa nella versione testuale del documento originale)*
+>
+> **TODO (Elisa):** l'immagine è solo nel `.docx` originale. Caricarla come PNG in `docs/fig/` (oppure passarla a Claude), poi sostituire questo segnaposto con `![Sezione rettangolarizzata al nodo](fig/nodo_bankfull.png)`.
 
 Il pannello a mostra come la sezione madre diventa un rettangolo di pari area $A_0$ al livello bankfull, mentre $W_0^m$ è misurata al livello del volo. Il pannello b è il nodo risolto in bankfull, con pelo libero comune e tiranti $D_1$, $D_2$ incogniti. Il pannello c riporta i rami alle condizioni del volo: larghezze ridotte dello stesso fattore, fondi invariati, portate ripartite con $\psi$.
 
