@@ -528,4 +528,4 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 | --- | --- |
 | 09/10/2026 | Conversione da `.docx` a Markdown; equazioni ricostruite in LaTeX. |
 | 09/10/2026 | Spostato nel repo GitHub (`docs/`): da qui in poi la versione di riferimento è questa. |
-| 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte": nodi di biforcazione non risolti sui dati 2025, cause e scelte di metodo. |
+| 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte" e la sezione 8 "Domande per Carlo". |
