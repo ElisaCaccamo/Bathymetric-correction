@@ -1,0 +1,5 @@
+# Outputs are produced locally by the scripts: keep only the folder structure
+Output_folder/**
+!Output_folder/*/
+!Output_folder/README.md
+!Output_folder/*/.gitkeep
