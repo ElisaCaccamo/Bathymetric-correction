@@ -1,4 +1,4 @@
-function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = W_bankfull_from_dtm_modifiche( ...
+function [W_bf, left_pt, right_pt, A_bf, D_bf, level_code] = W_bankfull_from_dtm_modifiche( ...
     i, z_rect_all, h_bf, ...
     Z, Xgrid, Ygrid, all_centerlines, opts)
 
@@ -26,6 +26,9 @@ function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = W_bankfull_from_dtm
 %      - spill_band      : (default 3) the bank tops are searched between
 %                          W_old/2 and spill_band*W_old from the centerline
 %                          (at most max_half_len)
+%      - h_min           : (default 0) minimum bankfull depth returned when
+%                          the level is limited by the banks (the caller
+%                          passes the critical depth theta_c*delta*d_50/S)
 %
 % BANKFULL LEVEL LIMITED BY THE BANKS (methodology §7.3)
 % The Shields depth h_bf can put the level z_rect_all(i) + h_bf above the
@@ -40,11 +43,22 @@ function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = W_bankfull_from_dtm
 % Shields stays the reference; the banks limit it where they are lower. The
 % level is set 1 cm below z_spill so that both banks are crossed.
 %
+% LOWER BOUND (multi-thread reaches): a bar or a low bank close to the
+% channel can give a spill level only 10-20 cm above the bed, i.e. a
+% bankfull Shields number below the critical one (no sediment motion at
+% "bankfull"). The returned depth is therefore never below h_min:
+%     D_bf = max(min(h_bf, z_spill - z_rect_all(i)), h_min)
+% The width and the area stay those measured at the spill level (raising
+% the level above the lower bank would bring back the mirrored banks).
+% These sections are flagged with level_code = 2 (low banks).
+%
 % OUTPUTS:
 %  W_bf [1x1], A_bf [1x1], left_pt (x,y) [1x2], right_pt (x,y) [1x2]
 %  D_bf       : bankfull depth actually used for the area and the width
 %               (= h_bf, or z_spill - z_rect_all(i) when the banks are lower)
-%  spill_used : true if the level was limited to the spill level
+%  level_code : 0 = Shields level, 1 = level limited to the spill level,
+%               2 = limited to the spill level and depth raised to h_min
+%               (low banks: width at the spill level, depth h_min)
 %
 % NB: Z must be the bathymetry-corrected DTM: z_target and the area are
 % referred to the riverbed z_rect_all, while in the raw LiDAR DTM the wet
@@ -52,6 +66,19 @@ function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = W_bankfull_from_dtm
 
 [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = bankfull_core(i, z_rect_all, h_bf, ...
     Z, Xgrid, Ygrid, all_centerlines, opts);
+level_code = double(spill_used);
+
+% --- lower bound of the depth when the level was limited by the banks ---
+h_min = 0;
+if isfield(opts, 'h_min') && ~isempty(opts.h_min)
+    h_min = opts.h_min;
+end
+if spill_used && isfinite(D_bf) && D_bf < h_min
+    warning('Section %d: spill depth %.2f m below the critical depth %.2f m -> D_bf = %.2f m (low banks).', ...
+        i, D_bf, h_min, h_min);
+    D_bf = h_min;
+    level_code = 2;
+end
 
 % --- conservative rule W_bf >= W_old, applied the same way on every path ---
 W_old_i = all_centerlines(i, 5);
