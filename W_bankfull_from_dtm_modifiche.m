@@ -1,4 +1,4 @@
-function [W_bf, left_pt, right_pt, A_bf] = W_bankfull_from_dtm_modifiche( ...
+function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = W_bankfull_from_dtm_modifiche( ...
     i, z_rect_all, h_bf, ...
     Z, Xgrid, Ygrid, all_centerlines, opts)
 
@@ -21,15 +21,36 @@ function [W_bf, left_pt, right_pt, A_bf] = W_bankfull_from_dtm_modifiche( ...
 %                                     smaller than the wetted width)
 %                           'nan'  -> W_bf = NaN
 %                           'none' -> keep W_bf
+%      - limit_to_spill  : (default true) limit the bankfull level to the
+%                          spill level of the transect (see below)
+%      - spill_band      : (default 3) the bank tops are searched between
+%                          W_old/2 and spill_band*W_old from the centerline
+%                          (at most max_half_len)
+%
+% BANKFULL LEVEL LIMITED BY THE BANKS (methodology §7.3)
+% The Shields depth h_bf can put the level z_rect_all(i) + h_bf above the
+% terrain on one or both sides of the transect. The original function then
+% clamps the level to the profile maximum (the HIGHER bank) and mirrors the
+% bank found on one side only, so the area includes floodplain that no bank
+% contains and the width is 2-7 times the wetted width. Here the level is
+% limited to the spill level of the transect,
+%     z_spill = min(highest point on the left bank, highest point on the right bank)
+% i.e. the lowest level at which water leaves the channel, so that
+%     D_bf = min(h_bf, z_spill - z_rect_all(i)).
+% Shields stays the reference; the banks limit it where they are lower. The
+% level is set 1 cm below z_spill so that both banks are crossed.
 %
 % OUTPUTS:
 %  W_bf [1x1], A_bf [1x1], left_pt (x,y) [1x2], right_pt (x,y) [1x2]
+%  D_bf       : bankfull depth actually used for the area and the width
+%               (= h_bf, or z_spill - z_rect_all(i) when the banks are lower)
+%  spill_used : true if the level was limited to the spill level
 %
 % NB: Z must be the bathymetry-corrected DTM: z_target and the area are
 % referred to the riverbed z_rect_all, while in the raw LiDAR DTM the wet
 % area contains the water surface.
 
-[W_bf, left_pt, right_pt, A_bf] = bankfull_core(i, z_rect_all, h_bf, ...
+[W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = bankfull_core(i, z_rect_all, h_bf, ...
     Z, Xgrid, Ygrid, all_centerlines, opts);
 
 % --- conservative rule W_bf >= W_old, applied the same way on every path ---
@@ -54,7 +75,7 @@ if isfinite(W_bf) && W_bf < W_old_i
 end
 end
 
-function [W_bf, left_pt, right_pt, A_bf] = bankfull_core(i, z_rect_all, h_bf, ...
+function [W_bf, left_pt, right_pt, A_bf, D_bf, spill_used] = bankfull_core(i, z_rect_all, h_bf, ...
     Z, Xgrid, Ygrid, all_centerlines, opts)
 
 % --- default outputs (used only if every path below fails) ---
@@ -62,6 +83,8 @@ W_bf = NaN;
 left_pt = [NaN, NaN];
 right_pt = [NaN, NaN];
 A_bf = NaN;
+D_bf = h_bf;
+spill_used = false;
 
 x_coords = all_centerlines(:, 2);
 y_coords = all_centerlines(:, 3);
@@ -159,8 +182,42 @@ if numel(idx_valid) < 2
     return;
 end
 s_valid = s(idx_valid);
-D_valid = D(idx_valid);
 zsec_valid = zsec(idx_valid);
+
+% --- bankfull level limited to the spill level of the transect (§7.3) ---
+% Bank tops: highest terrain point on each side, between the wetted
+% half-width W_old/2 and spill_band*W_old from the centerline. The lower of
+% the two is the spill level: above it the water is no longer contained.
+limit_to_spill = ~isfield(opts, 'limit_to_spill') || opts.limit_to_spill;
+if limit_to_spill
+    spill_band = 3;
+    if isfield(opts, 'spill_band') && ~isempty(opts.spill_band)
+        spill_band = opts.spill_band;
+    end
+    if isnan(W_old(i))
+        s_in = 0;  s_out = max_half;
+    else
+        s_in = 0.5 * W_old(i);  s_out = min(max_half, spill_band * W_old(i));
+    end
+    in_left  = s_valid <= -s_in & s_valid >= -s_out;
+    in_right = s_valid >=  s_in & s_valid <=  s_out;
+    if any(in_left) && any(in_right)
+        z_spill = min(max(zsec_valid(in_left)), max(zsec_valid(in_right)));
+        z_spill_target = z_spill - 0.01;               % 1 cm below: both banks are crossed
+        if z_target > z_spill_target && z_spill_target - z_rect_all(i) > 0.05
+            if verbose
+                fprintf('  spill level %.3f < Shields level %.3f -> D_bf = %.3f m\n', ...
+                        z_spill, z_target, z_spill_target - z_rect_all(i));
+            end
+            z_target = z_spill_target;
+            ht = z_target - z_rect_all(i);
+            spill_used = true;
+        end
+    end
+end
+D_bf = ht;
+D = zsec - z_target;
+D_valid = D(idx_valid);
 
 tol = 1e-3;        % tolerance for "near-zero" crossing [m]
 eps_clamp = 1e-2;  % clamp margin when z_target outside profile [m]  (kept for reference, not otherwise used)
@@ -380,6 +437,7 @@ if area_section <= 0
             % above the bed of THIS section (W_old rule applied by the caller)
             area_section = area_prev;
             W_bf = area_section / (z_target_prev - z_rect_all(i));
+            D_bf = z_target_prev - z_rect_all(i);
             left_pt = [xL, yL];
             right_pt = [xR, yR];
             A_bf = area_section;
@@ -408,6 +466,7 @@ end
 % z_target actually used: if z_target was clamped to the profile maximum,
 % the area refers to that lower level, not to the original h_bf.
 ht_eff = z_target - z_rect_all(i);
+D_bf = ht_eff;
 if ht_eff <= 0
     warning('Section %d: z_target (%.3f) not above the bed (%.3f) -> skip', i, z_target, z_rect_all(i));
     return;
