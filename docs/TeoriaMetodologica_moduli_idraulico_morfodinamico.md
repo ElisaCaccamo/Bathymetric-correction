@@ -631,34 +631,50 @@ Per misurare la sensibilità del nodo alla larghezza, il run è stato ripetuto s
 
 ### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
 
-**Dati e metodo.** I DTM corretti dal modulo idraulico e dal modulo morfodinamico (run di riferimento con le larghezze bankfull) sono confrontati con i punti GNSS del 07/03/2025 con `validation_gnss_mean.m`: 48 profili di misura, 956 punti dentro l'area corretta. Per ogni punto il residuo è la quota del DTM nella posizione del punto meno la quota media del suo profilo (quota ellissoidica), perché il modello assegna una sola quota a tutta la sezione; un residuo positivo indica un DTM più alto del fondo misurato. Ogni profilo è assegnato al tratto della centerline più vicino (distanza media al massimo 18 m) e classificato con la topologia della rete:
+Il confronto tra i due moduli si ripete con `Final/ModuleComparison.m` (dopo i due moduli; figure e tabelle in `Output_folder/04_Validation/ModuleComparison`).
 
-- **canale singolo:** tratti che portano tutta la portata della rete (tratti 0, 3, 8, 14): 8 profili;
-- **primo tratto a valle di una biforcazione:** 18 profili;
-- **altri tratti della rete a canali multipli:** 22 profili.
+**Dati e metodo.** I DTM corretti dal modulo idraulico e dal modulo morfodinamico (run di riferimento con le larghezze bankfull) sono confrontati con i punti GNSS del 07/03/2025. Una **stazione** è una sezione trasversale misurata con il GNSS: tutti i punti `sNNN_pMMM` con lo stesso `sNNN`. Le stazioni sono 48, con 956 punti dentro l'area corretta. La numerazione delle stazioni non segue la rete da monte a valle: per esempio s001 e s002 sono nel tratto 14, a valle di s004–s006 nel tratto 8. Per ogni punto il residuo è la quota del DTM nella posizione del punto meno la quota media della sua stazione (quota ellissoidica), perché il modello assegna una sola quota a tutta la sezione. Un residuo positivo indica un DTM più alto del fondo misurato.
 
-**Risultati** (residui in metri, punti dentro l'area corretta):
+Ogni punto è assegnato alla sezione della centerline più vicina, e la stazione al tratto della maggioranza dei suoi punti. In quattro stazioni i punti cadono su due tratti (s003: 46% dei punti sul tratto assegnato, s007: 64%, s015: 39%, s035: 89%), quindi la loro classificazione è incerta. Il tipo di tratto viene dalla topologia della rete: la frazione di filoni vale 1 alla testa, si dimezza in ogni ramo di una biforcazione e si somma alle confluenze.
 
-| Tipo di tratto | Profili / punti | DTM grezzo ME / RMSE | Modulo idraulico ME / RMSE / MAE | Modulo morfodinamico ME / RMSE / MAE |
-| --- | --- | --- | --- | --- |
-| Canale singolo | 8 / 147 | 0.44 / 0.47 | −0.05 / 0.54 / 0.31 | −0.07 / 0.55 / 0.31 |
-| Canale singolo senza s006 | 7 / 130 | 0.47 / 0.49 | 0.13 / 0.21 / 0.16 | 0.11 / 0.20 / 0.15 |
-| Primo tratto a valle di una biforcazione | 18 / 384 | 0.54 / 0.57 | 0.24 / 0.32 / 0.26 | 0.26 / 0.33 / 0.27 |
-| Altri tratti a canali multipli | 22 / 425 | 0.61 / 0.66 | 0.19 / 0.36 / 0.28 | 0.21 / 0.37 / 0.30 |
-| Tutti | 48 / 956 | 0.56 / 0.60 | 0.17 / 0.38 / 0.28 | 0.19 / 0.39 / 0.29 |
-| Tutti senza s006 | 47 / 939 | 0.56 / 0.60 | 0.20 / 0.33 / 0.26 | 0.22 / 0.34 / 0.27 |
+- **Canale singolo** (frazione 1, tratti 8 e 14): 8 stazioni.
+- **Tratto che inizia a una biforcazione:** 18 stazioni. Dodici sono nel tratto 30, lungo 1.8 km, per cui "a valle della biforcazione" vale davvero solo per le prime.
+- **Tratto a canali multipli che inizia a una confluenza:** 10 stazioni.
+- **Altri tratti a canali multipli:** 12 stazioni.
 
-Intervalli di confidenza al 95% (bootstrap) dell'RMSE su tutti i punti: 0.349–0.406 m per il modulo idraulico, 0.361–0.419 m per il modulo morfodinamico. Riduzione dell'RMSE rispetto al DTM grezzo: 0.22 m (0.19–0.25) e 0.21 m (0.18–0.24).
+Gli intervalli al 95% sono calcolati con il bootstrap delle **stazioni**, non dei punti, perché i punti di una stessa sezione condividono la quota di riferimento e non sono indipendenti. Ricampionando i punti si ottengono intervalli troppo stretti (0.35–0.41 m per l'RMSE del modulo idraulico, contro 0.27–0.50 m).
 
-**Confronto profilo per profilo.** Il DTM corretto dai due moduli differisce di più di 1 mm in 954 punti su 1002, di più di 5 cm in 108 punti, al massimo di 12 cm. Le differenze non si limitano ai profili vicini ai nodi: la ripartizione della portata a una biforcazione cambia i tiranti in tutti i tratti a valle, fino alla confluenza successiva. In 29 profili su 48 la differenza media supera 2 cm; in 25 di questi è più vicino ai GNSS il modulo idraulico, in 4 il modulo morfodinamico (s019, s020, s022, s047). Nella maggior parte dei profili il modulo morfodinamico alza il fondo di 2–8 cm (meno portata nel ramo, quindi tirante minore): poiché il fondo corretto è già in media più alto di quello misurato, questo peggiora leggermente il residuo.
+**Risultati** (metri; RMSE con intervallo al 95% tra parentesi quadre):
+
+| Tipo di tratto | Stazioni / punti | DTM grezzo ME / RMSE | Modulo idraulico ME / RMSE | Modulo morfodinamico ME / RMSE | RMSE morfodinamico − idraulico | Stazioni in cui il morfodinamico è più vicino |
+| --- | --- | --- | --- | --- | --- | --- |
+| Canale singolo | 8 / 147 | +0.44 / 0.47 | −0.05 / 0.54 [0.10–0.93] | −0.07 / 0.55 [0.10–0.95] | +0.007 [−0.012, +0.018] | 5 / 8 |
+| Canale singolo senza s006 | 7 / 130 | +0.47 / 0.49 | +0.13 / 0.21 [0.07–0.31] | +0.11 / 0.20 [0.08–0.30] | −0.007 [−0.012, +0.008] | 5 / 7 |
+| A valle di una biforcazione | 18 / 384 | +0.54 / 0.57 | +0.24 / 0.32 [0.21–0.42] | +0.26 / 0.33 [0.23–0.44] | +0.015 [+0.009, +0.021] | 1 / 18 |
+| A valle di una confluenza | 10 / 213 | +0.54 / 0.54 | +0.14 / 0.35 [0.25–0.46] | +0.16 / 0.35 [0.25–0.45] | +0.000 [−0.009, +0.011] | 2 / 10 |
+| Altri tratti a canali multipli | 12 / 212 | +0.69 / 0.76 | +0.24 / 0.37 [0.15–0.51] | +0.26 / 0.40 [0.17–0.54] | +0.027 [+0.016, +0.035] | 2 / 12 |
+| Tutte | 48 / 956 | +0.56 / 0.60 | +0.17 / 0.38 [0.27–0.50] | +0.19 / 0.39 [0.28–0.51] | +0.013 [+0.007, +0.018] | 10 / 48 |
+| Tutte senza s006 | 47 / 939 | +0.56 / 0.60 | +0.20 / 0.32 [0.26–0.39] | +0.22 / 0.34 [0.27–0.40] | +0.013 [+0.005, +0.018] | 10 / 47 |
+
+**Confronto stazione per stazione.** Il modulo idraulico ha l'RMSE più basso in 38 stazioni su 48 (test del segno a due code, p ≈ 6·10⁻⁵). La differenza di RMSE complessiva, +1.3 cm (intervallo +0.7…+1.8 cm), esclude lo zero: è piccola ma sistematica, non casuale. È più marcata nei tratti a valle di una biforcazione, dove il modulo morfodinamico è più vicino ai GNSS in una sola stazione su 18, e negli altri tratti a canali multipli (+2.7 cm). Nel canale singolo il modulo morfodinamico è più vicino in 5 stazioni su 8, per una ragione che non dipende dal nodo (punto 1 qui sotto).
+
+**Dove agisce il modulo morfodinamico.** Le quote di fondo dei due moduli lungo la centerline coincidono nei tratti 0 e 3, a monte della prima biforcazione. Più a valle differiscono in tutti i tratti, non solo nel primo tratto dei rami: il modulo morfodinamico cambia la ripartizione della portata a ogni nodo, e con essa la portata e il tirante di tutta la rete a valle. Le portate di ogni tratto, ricavate dalle quote di fondo dei due moduli con $Q = W\,h^{5/3}S^{1/2}/n$ e $h = z_{DTM} - z_{fondo}$, mostrano però due problemi che pesano su questo confronto.
+
+1. **Il modulo idraulico non conserva la portata.** Il tratto 6 riceve 5.00 m³/s, cioè la portata del tratto 5, invece dei 5.80 m³/s del tratto 4 da cui nasce. Da lì in poi la rete del modulo idraulico porta 9.99 m³/s invece di 10.80 m³/s (−7.5%). La causa più probabile, coerente con questi valori, è nel ciclo delle sezioni di `Preprocessing_HydraulicModule.m`: nei blocchi del canale singolo e della confluenza la portata viene scritta anche nella riga successiva (`Q_map(i+1)`), anche quando quella riga è la prima sezione di un altro tratto, e quel tratto conserva poi il valore sbagliato. Il modulo morfodinamico propaga la portata per tratti e la conserva a tutti i nodi. Per questo, nei tratti a canale singolo 8 e 14, i due moduli differiscono di −2.5 e −1.6 cm: il morfodinamico, con la portata giusta, ha un fondo più profondo. Sono queste le differenze delle stazioni s001, s002, s004–s006 e s028–s030, e una parte delle differenze a valle.
+2. **Due rami non hanno un tratto a valle.** Il ramo 16–15 e il ramo 29 terminano senza ricollegarsi alla rete: la fine del tratto 15 dista circa 100 m dal tratto più vicino, quella del 29 circa 140 m, mentre la soglia di collegamento è 51 m. La loro portata esce dalla rete: 1.47 + 0.70 m³/s nel modulo idraulico, 2.65 + 1.39 m³/s nel morfodinamico. A valle del tratto 30 la rete porta così 7.83 m³/s (idraulico) e 6.75 m³/s (morfodinamico) invece di 10.80 m³/s. Meno portata significa tiranti minori e fondo più alto: è una possibile causa dell'errore positivo, più forte nella rete a canali multipli.
+
+Questi valori sono ricavati a ritroso dalle quote di fondo. Vanno confermati con le portate salvate dai due moduli (`Q_map` nei workspace), che `Final/check_discharge_conservation.m` controlla nodo per nodo.
+
+**I forti residui negativi** delle stazioni s006, s019 e s020 (in media −1.44, −0.71 e −0.36 m) non dipendono dal tirante calcolato né dal rilievo GNSS. Il fondo corretto è $z_{DTM} - h$, dove $z_{DTM}$ è la quota della sezione della centerline (media del DTM di segmento lungo la sezione, dentro la maschera). Vicino a queste stazioni, e a s032, $z_{DTM}$ è 0.6–1.6 m più bassa del DTM grezzo misurato lungo la sezione GNSS e oscilla di 0.7–1.5 m su ±3 sezioni (60 m). Sulle 48 stazioni, la differenza tra DTM grezzo e $z_{DTM}$ della sezione ha una correlazione di −0.78 con il residuo del modulo idraulico. A s006, per esempio, il DTM grezzo lungo la sezione è piatto (±4 cm) e sta 0.20 m sopra la media GNSS; $z_{DTM}$ vale invece 253.90 m, 1.56 m più in basso, e il tirante del modulo (0.58 m) viene sottratto da lì. Il filtro sulle oscillazioni isolate di $z_{DTM}$ interviene solo sopra 1 m di curvatura, e i tratti 8, 18 e 33 non sono tra quelli lisciati (`segments_to_smooth`).
 
 **Conclusioni.**
 
 1. **Entrambi i moduli migliorano nettamente il DTM grezzo:** l'RMSE scende da 0.60 a 0.38–0.39 m e l'errore sistematico da +0.56 a +0.17–0.19 m.
-2. **Il modulo morfodinamico non è distinguibile dal modulo idraulico** sull'insieme dei punti: la differenza di RMSE (+1.3 cm) è ben dentro gli intervalli di confidenza. È leggermente peggiore nei tratti a canali multipli (+1.5 cm di RMSE) e leggermente migliore nel canale singolo senza il profilo s006 (−0.7 cm).
-3. **L'errore dominante è sistematico e non dipende dal nodo:** nei tratti a canali multipli il DTM corretto resta in media 0.19–0.26 m sopra il fondo misurato, nel canale singolo 0.11–0.13 m (senza s006). I tiranti calcolati sono quindi sottostimati soprattutto nella rete a canali multipli; le cause da verificare sono la scabrezza (n = 0.03 costante), la ripartizione della portata e le larghezze della maschera nei rami stretti. Le differenze tra i due moduli (al massimo 12 cm) sono più piccole di questo errore, per cui la validazione GNSS da sola non può dire quale ripartizione ai nodi sia più corretta.
-4. **Il profilo s006** (residuo di circa −1.9 m, tratto 8, a valle della confluenza 168) è uguale nei due moduli e domina l'RMSE del canale singolo: va verificato separatamente (pendenza del tratto 5.6·10⁻⁴, possibile errore locale del DTM o del rilievo).
-5. **Conseguenza.** Allo stato attuale il contributo del modulo morfodinamico non è un miglioramento dell'accuratezza del fondo, ma la coerenza fisica della ripartizione di acqua e sedimento ai nodi (equilibrio, selezione granulometrica). Per misurarne l'effetto sull'accuratezza servono dati che distinguano la ripartizione tra i rami, come le misure ADCP di portata nei rami, oppure la riduzione dell'errore sistematico comune ai due moduli.
+2. **Il modulo idraulico è leggermente ma sistematicamente più vicino ai GNSS:** +1.3 cm di RMSE (+0.7…+1.8 cm), più vicino in 38 stazioni su 48. La differenza è piccola rispetto all'errore complessivo e all'incertezza dell'RMSE stesso (0.27–0.50 m).
+3. **Questo confronto non isola l'effetto del nodo:** il modulo idraulico perde portata dal tratto 6 in giù, e in entrambi i moduli la portata dei rami 16–15 e 29 esce dalla rete. Il confronto va ripetuto dopo aver corretto la propagazione della portata e verificato i due rami.
+4. **L'errore dominante resta sistematico e positivo** (DTM corretto troppo alto), più forte nella rete a canali multipli. Le cause da verificare sono la portata persa nei rami senza uscita, la scabrezza (n = 0.03 costante) e le larghezze della maschera nei rami stretti.
+5. **I forti residui negativi** (s006, s019, s020) vengono dalle oscillazioni di $z_{DTM}$ lungo la centerline, non dal tirante né dal rilievo, e vanno corretti nel pre-processing.
+6. **Conseguenza.** Allo stato attuale il contributo del modulo morfodinamico non è un miglioramento dell'accuratezza del fondo, ma la coerenza fisica della ripartizione di acqua e sedimento ai nodi (equilibrio, selezione granulometrica). Per misurarne l'effetto sull'accuratezza servono le correzioni dei punti 3 e 5 e dati che distinguano la ripartizione tra i rami, come le misure ADCP di portata nei rami.
 
 ---
 
@@ -671,3 +687,4 @@ Intervalli di confidenza al 95% (bootstrap) dell'RMSE su tutti i punti: 0.349–
 | 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte" e la sezione 8 "Domande per Carlo". |
 | 18/11/2026 | Aggiunta la sezione 9 "Aggiornamento del modulo morfodinamico": modifiche introdotte nel codice il 12/10/2026 e il 18/11/2026, risultati del run del 18/11/2026 e test di sensitività alla larghezza. |
 | 18/11/2026 | Aggiunta la §9.5: validazione GNSS del modulo idraulico e del modulo morfodinamico, per tipo di tratto e profilo per profilo. |
+| 18/11/2026 | Corretta la §9.5: intervalli di confidenza per stazione invece che per punto; confronto stazione per stazione (il modulo idraulico è leggermente ma sistematicamente più vicino ai GNSS, non indistinguibile); quattro tipi di tratto; portata non conservata nel modulo idraulico e rami senza uscita; origine dei forti residui negativi in $z_{DTM}$. |
