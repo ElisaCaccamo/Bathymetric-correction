@@ -546,6 +546,38 @@ $z_{sfioro}$ è il più basso dei due punti più alti del terreno, uno per lato,
 - bilanci di cella per F e C (§4.4, eq. 4–5 di §5.2), con $\eta_1-\eta_2=D_2-D_1$;
 - continuità solida per F e C (eq. 6–7 di §5.2).
 
+**Cosa si intende per nodo in forma BRT.** È il modello a due celle di Bolla Pittaluga, Repetto e Tubino (2003, "BRT"), esteso alle miscele da Ragno et al. (2023) e qui a rami di larghezza diversa. Ipotesi:
+
+1. **equilibrio:** in ciascun ramo il trasporto di ogni classe è pari alla capacità di trasporto, e i flussi solidi si conservano al nodo;
+2. **condizioni bankfull:** la configurazione del nodo si forma a rive piene (§4.3);
+3. **moto uniforme in ciascun ramo**, sezione rettangolare larga, Manning con $n$ costante;
+4. **pelo libero comune al nodo:** $\eta_0+D_0=\eta_1+D_1=\eta_2+D_2$, quindi $\eta_1-\eta_2=D_2-D_1$ e $\eta_i=\eta_0+D_0-D_i$;
+5. **rami di uguale lunghezza che terminano allo stesso livello:** i due rami hanno la stessa pendenza di equilibrio $S_b$, che è un'incognita;
+6. **due celle di lunghezza $\alpha W_0$ a monte del nodo** ($\alpha=4$): il flusso laterale di sedimento tra le celle è dovuto alla deviazione della corrente e al richiamo gravitativo lungo la pendenza trasversale (coefficiente di Ikeda $r=0.65$, "grain independence", §4.4);
+7. **larghezze note**, con $W_1+W_2=W_0$; la soluzione bilanciata di riferimento è la ripartizione proporzionale alle larghezze, $\psi=W_1/W_0$.
+
+Equazioni, nelle 6 incognite $\psi$, $D_1$, $D_2$, $S_b$, $f_{1F}$, $f_{2F}$ (con $Q_1=\psi Q_0$, $Q_2=(1-\psi)Q_0$ e $Q_{si,x}=f_{ix}\,q_{six}(D_i,S_b,f_{iF})\,W_i$):
+
+$$
+\psi\,Q_0 = \frac{W_1\,D_1^{5/3}\sqrt{S_b}}{n}, \qquad
+(1-\psi)\,Q_0 = \frac{W_2\,D_2^{5/3}\sqrt{S_b}}{n} \tag{1–2}
+$$
+
+$$
+f_{0x}\,q_{sy,x} = \frac{1}{2\alpha W_0}\left(Q_{s1,x} - Q_{s2,x} - Q_{s0,x}\,\frac{W_1 - W_2}{W_1 + W_2}\right), \qquad x = F, C \tag{3–4}
+$$
+
+$$
+q_{sy,x} = q_{s0,x}\left[\frac{Q_y}{\alpha W_0\,q_0} - \frac{r}{\sqrt{\theta_{g0}\,l_{hr,x}}}\,\frac{2\,(D_2 - D_1)}{W_0}\right], \qquad
+Q_y = \frac{1}{2}\left(Q_1 - Q_2 - Q_0\,\frac{W_1 - W_2}{W_0}\right)
+$$
+
+$$
+Q_{s1,x} + Q_{s2,x} = Q_{s0,x}, \qquad x = F, C \tag{5–6}
+$$
+
+Le (1)–(2) sono il moto uniforme nei rami, le (3)–(4) i bilanci di cella per le classi fine e grossolana, le (5)–(6) la continuità solida. La continuità liquida è implicita nell'uso di $\psi$.
+
 L'equazione (8), $\eta_0=(\eta_1+\eta_2)/2$, e le pendenze imposte ai rami non si usano più. Motivo: il sistema di §5.2 non conteneva il moto uniforme nei rami. Con le pendenze misurate (rami 1.5–5 volte più ripidi della madre) non aveva soluzione; con la stessa pendenza nei tre rami dava una seconda soluzione in cui un ramo portava fino a 2.5 volte la portata compatibile con il suo tirante, e con rami di uguale larghezza non dava mai le soluzioni asimmetriche di BRT. La forma a 6 equazioni le ritrova: con rami uguali, sotto un rapporto di forma critico $\beta=W_0/(2D_0)\approx13$ esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche speculari.
 
 **Scelta della soluzione.** `fsolve` parte da 55 configurazioni e trova tutte le soluzioni fisiche. La soluzione bilanciata ($\psi=W_1/W_0$, $D_1=D_2=D_0$, $S_b=S_0$) esiste sempre: se è l'unica si adotta; se esistono soluzioni asimmetriche la bilanciata è instabile (BRT) e si adotta l'asimmetrica più vicina a $\psi_{hyd}$, la quota del ramo 1 nel modulo idraulico al volo ($Q_i^{hyd}\propto W_i^m h_i^{5/3}\sqrt{S_i}$ alla prima sezione dei rami).
