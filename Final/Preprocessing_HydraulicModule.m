@@ -840,7 +840,10 @@ for k = 1:n_points
         sectionWet(i).Q = Q_total;
         h_rect_all(i) = h_rect;
         z_rect_all(i) = z_rect;
+        % propagate only inside the same segment: the first section of another
+        % segment takes its discharge from its own upstream segment
         if i < n_points && ...
+           all_centerlines(i+1,6) == all_centerlines(i,6) && ...
            ~ismember(all_centerlines(i+1,1), conf_ids) && ...
            ~ismember(all_centerlines(i+1,1), bif_ids)
             Q_map(i+1) = Q_total;
@@ -882,8 +885,12 @@ for k = 1:n_points
         sectionWet(i).Q = Q_local;
         h_rect_all(i) = h_rect;
         z_rect_all(i) = z_rect;
-        % Discharge propagation
+        % Discharge propagation, only inside the same segment: the first
+        % section of another segment takes its discharge from its own upstream
+        % segment (otherwise it would inherit the discharge of the previous
+        % row, i.e. of an unrelated segment)
         if i < n_points && ...
+           all_centerlines(i+1,6) == all_centerlines(i,6) && ...
            ~ismember(all_centerlines(i+1,1), conf_ids) && ...
            ~ismember(all_centerlines(i+1,1), bif_ids)
 
