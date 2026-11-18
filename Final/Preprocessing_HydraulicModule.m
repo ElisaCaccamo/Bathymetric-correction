@@ -21,7 +21,7 @@ input_dir  = fullfile(root_dir, 'Input_folder');
 output_dir = fullfile(root_dir, 'Output_folder');
 config_file = fullfile(input_dir, 'config_ORCO_2025.m');
 
-addpath(root_dir);   % external functions (centerline_from_mask_modifiche, calculate_widths, ...)
+addpath(root_dir);   % external functions (centerline_from_mask, calculate_widths, ...)
 run(config_file);
 
 out_pre   = fullfile(output_dir, '01_Preprocessing');
@@ -97,7 +97,7 @@ for i = 1:length(dtm_files)
     end
 
     % Centerline calculation
-    [cl, ~] = centerline_from_mask_modifiche(river_mask, es, Wn_px, plotornot);
+    [cl, ~] = centerline_from_mask(river_mask, es, Wn_px, plotornot);
 
     [x_cl, y_cl] = intrinsicToWorld(R_mask, cl(:, 1), cl(:, 2));
     x_world = linspace(R_mask.XWorldLimits(1), R_mask.XWorldLimits(2), size(river_mask, 2));
