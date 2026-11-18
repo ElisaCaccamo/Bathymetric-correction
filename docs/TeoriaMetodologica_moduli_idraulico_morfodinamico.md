@@ -524,7 +524,7 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 
 ## 9. Aggiornamento del modulo morfodinamico (novembre 2026)
 
-Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_ORCO_bifurcationsNEW_modifiche_modifiche.mlx`) e il 18/11/2026 (`0_ORCO_bifurcations.m`) e i risultati dei run del 18/11/2026. Dove è in contrasto con le sezioni precedenti (in particolare §4.3, §5.2–5.3, §6, §7 e §8), vale quanto scritto qui; le sezioni precedenti saranno aggiornate in seguito.
+Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_ORCO_bifurcationsNEW_modifiche_modifiche.mlx`) e il 18/11/2026 (`ORCO_bifurcations.m`) e i risultati dei run del 18/11/2026. Dove è in contrasto con le sezioni precedenti (in particolare §4.3, §5.2–5.3, §6, §7 e §8), vale quanto scritto qui; le sezioni precedenti saranno aggiornate in seguito.
 
 ### 9.1 Modifiche al metodo
 
