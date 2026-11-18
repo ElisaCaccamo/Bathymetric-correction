@@ -69,15 +69,15 @@ for i = 1:length(dtm_files)
     px_size_x = R_mask.CellExtentInWorldX;
     px_size_y = R_mask.CellExtentInWorldY;
     if abs(px_size_x - px_size_y) > 1e-6
-        warning('Pixel non quadrati nella maschera %s (dx=%.3f, dy=%.3f m): uso la media.', ...
+        warning('Non-square pixels in mask %s (dx=%.3f, dy=%.3f m): using the mean.', ...
             mask_files(i).name, px_size_x, px_size_y);
     end
     px_size = mean([px_size_x, px_size_y]);   % m/pixel
 
-    Wn_px = Wn / px_size;                     % Larghezza nominale in PIXEL
+    Wn_px = Wn / px_size;                     % Nominal width in PIXELS
 
     if Wn_px < 3
-        warning('Wn_px = %.1f px per %s: soglia di pulizia scheletro molto bassa, verificare la risoluzione.', ...
+        warning('Wn_px = %.1f px for %s: very low skeleton cleaning threshold, check the resolution.', ...
             Wn_px, mask_files(i).name);
     end
 
@@ -117,7 +117,7 @@ for i = 1:length(dtm_files)
             if j > 1 && z_interp(j-1) >= 0
                 z_interp(j) = z_interp(j-1);
             elseif j < length(z_interp) && z_interp(j+1) >= 0
-                z_interp(j) = z_interp(j+1);  % altrimenti assegna valore successivo
+                z_interp(j) = z_interp(j+1);  % otherwise take the next value
             end
         end
     end
@@ -233,7 +233,7 @@ hold off;
 save_fig(fig, save_figures, out_fig_pre, 'PRE_centerlines_before_flip');
 
 %% Flip river segments UPSTREAM - DOWNSTREAM
-% Codes from config (segments_to_flip); interactive = true asks them as in the original
+% Codes from config (segments_to_flip); interactive = true asks them with input()
 if interactive
     invert_input = input('Are there river segments to flip (yes/no): ', 's');
     if strcmpi(invert_input, 'yes')
@@ -259,8 +259,8 @@ for i = 1:length(tratti_da_invertire)
         range = min(start_idx, end_idx):max(start_idx, end_idx);
         all_centerlines(range, 2:end) = flipud(all_centerlines(range, 2:end));
 
-        % Allineare ANCHE le matrici delle sezioni trasversali e le larghezze,
-        % altrimenti restano nell'ordine pre-flip e si disallineano da all_centerlines
+        % Flip ALSO the cross-section matrices and the widths, otherwise they
+        % keep the pre-flip order and are misaligned with all_centerlines
         x_matrix(range, :)  = flipud(x_matrix(range, :));
         y_matrix(range, :)  = flipud(y_matrix(range, :));
         z_matrix(range, :)  = flipud(z_matrix(range, :));
@@ -399,7 +399,7 @@ end
 
 %% Overcome bridges issue-manually insert bifurcation and confluences not found
 % From config (forced_bifurcations, forced_confluences); interactive = true
-% asks them as in the original
+% asks them with input()
 if interactive
     forced_bifurcations = zeros(0, 3);
     while true
@@ -498,13 +498,13 @@ num_sections = size(sections_ids, 1);
 start_ids = sections_ids(:,1);
 end_ids   = sections_ids(:,2);
 
-predecessor = cell(num_sections, 1);   % ID di monte per ciascun tronco (1 o 2 per confluenza)
-edges = [];                            % archi [tronco_monte, tronco_valle] per il grafo
+predecessor = cell(num_sections, 1);   % upstream segment(s) of each segment (2 at a confluence)
+edges = [];                            % graph edges [upstream segment, downstream segment]
 
 for s = 1:num_sections
     start_id = start_ids(s);
 
-    % 1) Il tronco nasce da una CONFLUENZA?
+    % 1) Does the segment start at a CONFLUENCE?
     conf_match = [];
     if ~isempty(conf_info)
         conf_match = find(cellfun(@(x) isequal(x, start_id), conf_info(:,1)));
@@ -514,7 +514,7 @@ for s = 1:num_sections
         for k = 1:numel(up_ids)
             s_up = find(end_ids == up_ids(k));
             if isempty(s_up)
-                error('Topologia: tronco a monte non trovato per confluenza (ID %d).', up_ids(k));
+                error('Topology: upstream segment not found for confluence (ID %d).', up_ids(k));
             end
             predecessor{s} = [predecessor{s}, s_up];
             edges = [edges; s_up, s];
@@ -522,13 +522,13 @@ for s = 1:num_sections
         continue
     end
 
-    % 2) Il tronco è un ramo di BIFORCAZIONE?
+    % 2) Is the segment a BIFURCATION branch?
     is_branch = false;
     for b = 1:size(bif_info,1)
         if any(bif_info{b,2} == start_id)
             s_up = find(end_ids == bif_info{b,1});
             if isempty(s_up)
-                error('Topologia: tronco a monte non trovato per biforcazione (ID %d).', bif_info{b,1});
+                error('Topology: upstream segment not found for bifurcation (ID %d).', bif_info{b,1});
             end
             predecessor{s} = s_up;
             edges = [edges; s_up, s];
@@ -538,7 +538,7 @@ for s = 1:num_sections
     end
     if is_branch, continue, end
 
-    % 3) Continuazione semplice: unica connessione nella adjacency_matrix
+    % 3) Simple continuation: single connection in adjacency_matrix
     col = find(adjacency_matrix(1,2:end) == start_id) + 1;
     if ~isempty(col)
         row = find(adjacency_matrix(2:end, col) == 1);
@@ -546,21 +546,21 @@ for s = 1:num_sections
             up_id = adjacency_matrix(row+1, 1);
             s_up = find(end_ids == up_id);
             if isempty(s_up)
-                error('Topologia: tronco a monte non trovato per continuazione semplice (ID %d).', up_id);
+                error('Topology: upstream segment not found for simple continuation (ID %d).', up_id);
             end
             predecessor{s} = s_up;
             edges = [edges; s_up, s];
             continue
         elseif numel(row) > 1
-            error('Topologia: il tronco %d ha più connessioni a monte non registrate come confluenza.', s);
+            error('Topology: segment %d has several upstream connections not registered as a confluence.', s);
         end
     end
 
-    % 4) Nessuna connessione trovata -> testata di rete
+    % 4) No connection found -> network head
     predecessor{s} = [];
 end
 
-% Ordinamento topologico
+% Topological ordering
 if isempty(edges)
     topo_order = 1:num_sections;
 else
@@ -568,16 +568,16 @@ else
     try
         topo_order = toposort(G);
     catch ME
-        error('Il grafo dei tronchi contiene un ciclo: verificare bif_info/conf_info. %s', ME.message);
+        error('The segment graph contains a cycle: check bif_info/conf_info. %s', ME.message);
     end
 end
 
-% --- Controllo diagnostico: confronto con l'assunzione "codice crescente = valle"
+% --- Diagnostic check: comparison with the assumption "increasing code = downstream"
 codes_by_section = arrayfun(@(s) all_centerlines(find(all_centerlines(:,1)==sections_ids(s,1),1), 6), 1:num_sections);
 [~, order_by_code] = sort(codes_by_section);
 if ~isequal(order_by_code(:), topo_order(:))
-    % Confronto per RANGO (posizione), non per insieme: setdiff è inutile
-    % qui perché i due ordinamenti contengono sempre gli stessi tronchi.
+    % Comparison by RANK (position), not by set: setdiff is useless here
+    % because the two orderings always contain the same segments.
     rank_by_code = zeros(num_sections,1);
     rank_by_code(order_by_code) = 1:num_sections;
     rank_topo = zeros(num_sections,1);
@@ -586,23 +586,23 @@ if ~isequal(order_by_code(:), topo_order(:))
     mismatched = find(rank_by_code ~= rank_topo);
     mismatch_codes = codes_by_section(mismatched);
 
-    warning(['L''ordine per codice crescente NON coincide con l''ordine topologico reale. ' ...
-             'Uso l''ordine geometrico (corretto). Codici tronco con posizione diversa: %s'], ...
+    warning(['The order by increasing code does NOT match the actual topological order. ' ...
+             'Using the geometric (correct) order. Segment codes in a different position: %s'], ...
              mat2str(mismatch_codes));
 end
 
-% --- Individuazione della/e testata/e di rete e assegnazione portata a monte
+% --- Network head(s) and upstream discharge
 roots = find(cellfun(@isempty, predecessor));
 if isempty(roots)
-    error('Topologia: nessuna testata di rete individuata (possibile ciclo o errore nei dati).');
+    error('Topology: no network head found (possible cycle or data error).');
 end
 if numel(roots) > 1
-    warning(['Trovate %d testate di rete senza tronco a monte: %s. ' ...
-             'Verificare quale corrisponde alla stazione di monte (San Benigno) e se le altre ' ...
-             'sono affluenti che richiedono una portata nota da assegnare manualmente.'], ...
+    warning(['Found %d network heads with no upstream segment: %s. ' ...
+             'Check which one is the upstream gauging station (San Benigno) and whether the others ' ...
+             'are tributaries that need a known discharge assigned manually.'], ...
              numel(roots), mat2str(roots));
     root_codes = codes_by_section(roots);
-    disp(table(roots(:), root_codes(:), 'VariableNames', {'row_index','tronco_code'}));
+    disp(table(roots(:), root_codes(:), 'VariableNames', {'row_index','segment_code'}));
 end
 network_root = roots(1);
 
@@ -618,10 +618,10 @@ for t = tronchi_uniq'
     out = abs(curvatura) > soglia;
     outlier_flags(idx(out)) = true;
 end
-fprintf('%d punti con probabile glitch isolato di z_coords\n', nnz(outlier_flags));
+fprintf('%d points with a probable isolated glitch of z_coords\n', nnz(outlier_flags));
 disp(all_centerlines(outlier_flags, [1 4 6]))
 
-z_original = all_centerlines(:,4);   % snapshot pre-correzione, per non propagare errori tra correzioni vicine
+z_original = all_centerlines(:,4);   % snapshot before the correction, so that errors do not propagate between neighbouring corrections
 for row = find(outlier_flags)'
     idx = find(all_centerlines(:,6) == all_centerlines(row,6));
     pos_in_tronco = find(idx == row);
@@ -631,12 +631,12 @@ for row = find(outlier_flags)'
         all_centerlines(row, 4) = mean([z_prev, z_next]);
     end
 end
-%% Smoothing mirato per tronchi con oscillazione sistematica
-% (non presa dal rilevatore di glitch isolati sopra, perché il rumore qui
-% è distribuito su più punti consecutivi, non un singolo outlier).
-% Tronchi e finestre da config (segments_to_smooth)
+%% Targeted smoothing of segments with systematic oscillation
+% (not caught by the isolated-glitch detector above, because here the noise
+% is spread over several consecutive points, not a single outlier).
+% Segments and windows from config (segments_to_smooth)
 for k = 1:numel(segments_to_smooth)
-    t = segments_to_smooth(k).tronco;
+    t = segments_to_smooth(k).segment;
     w = segments_to_smooth(k).window;
     idx_t = find(all_centerlines(:,6) == t);
     if numel(idx_t) < w, continue; end
@@ -644,13 +644,13 @@ for k = 1:numel(segments_to_smooth)
     z_before = all_centerlines(idx_t, 4);
     z_after  = movmedian(z_before, w);
 
-    fprintf('Tronco %d (w=%d): ampiezza prima = %.2f m, dopo = %.2f m\n', ...
+    fprintf('Segment %d (w=%d): range before = %.2f m, after = %.2f m\n', ...
         t, w, max(z_before)-min(z_before), max(z_after)-min(z_after));
 
     all_centerlines(idx_t, 4) = z_after;
 end
-% Ri-sincronizza z_coords con all_centerlines(:,4) dopo la pulizia dei glitch,
-% altrimenti pendenze e calcolo idraulico restano legati alla versione non pulita
+% Re-synchronise z_coords with all_centerlines(:,4) after the glitch cleaning,
+% otherwise slopes and hydraulics stay tied to the uncleaned version
 z_coords = all_centerlines(:, 4);
 
 %% Slope calculation (mean of segment-by-segment slopes)
@@ -682,7 +682,7 @@ for s = 1:n_sections
 
 
     else
-        warning("Riversegment %d is too short. Defined slope assigned", s);
+        warning("River segment %d is too short. Defined slope assigned", s);
         slope_sect(idx_start:idx_end) = slope_min;
     end
 end
@@ -858,18 +858,18 @@ for k = 1:n_points
                 seg_idx = find(sections_ids(:,1) == all_centerlines(i,1));
                 up = predecessor{seg_idx};
                 if isempty(up)
-                    warning('Tronco %d (testata di rete): portata a monte non definita. Sezione saltata.', seg_idx);
+                    warning('Segment %d (network head): upstream discharge not defined. Section skipped.', seg_idx);
                     continue
                 end
                 up_row = section_to_index(sections_ids(up,2));
                 if isnan(Q_map(up_row))
-                    error('Tronco %d: portata del tronco a monte (%d) non ancora calcolata. Errore di ordine topologico.', seg_idx, up);
+                    error('Segment %d: discharge of the upstream segment (%d) not computed yet. Topological order error.', seg_idx, up);
                 end
                 Q_map(i) = Q_map(up_row);
             elseif k > 1
-                Q_map(i) = Q_map(iter_rows(k-1));   % continuazione interna allo stesso tronco
+                Q_map(i) = Q_map(iter_rows(k-1));   % continuation inside the same segment
             else
-                warning('Q_map(%d) non definita e non è possibile risalire al valore precedente.', i);
+                warning('Q_map(%d) not defined and the previous value cannot be retrieved.', i);
                 continue;
             end
         end
@@ -941,7 +941,7 @@ xmax_dtm = R_dtm.XWorldLimits(2);
 ymin_dtm = R_dtm.YWorldLimits(1);
 ymax_dtm = R_dtm.YWorldLimits(2);
 
-% Maschera bounding box
+% Mask bounding box
 xmin_mask = Rmask_wetarea.XWorldLimits(1);
 xmax_mask = Rmask_wetarea.XWorldLimits(2);
 ymin_mask = Rmask_wetarea.YWorldLimits(1);
@@ -951,37 +951,36 @@ fprintf('DTM extent: xmin=%.2f, xmax=%.2f, ymin=%.2f, ymax=%.2f\n', xmin_dtm, xm
 fprintf('Mask extent: xmin=%.2f, xmax=%.2f, ymin=%.2f, ymax=%.2f\n', xmin_mask, xmax_mask, ymin_mask, ymax_mask);
 
 %% Wet area mask on the DTM grid
-% Coordinate del primo pixel TRUE della maschera (in coordinate mondo)
-% Crea una griglia di coordinate mondo per la maschera
+% World coordinates of every mask pixel
 [cols_mask, rows_mask] = meshgrid(1:size(mask_wetarea,2), 1:size(mask_wetarea,1));
 [xw_mask, yw_mask] = Rmask_wetarea.intrinsicToWorld(cols_mask, rows_mask);
 
-% Tieni solo i pixel TRUE della maschera
+% Keep only the TRUE pixels of the mask
 mask_true_idx = find(mask_wetarea);
 x_mask_true = xw_mask(mask_true_idx);
 y_mask_true = yw_mask(mask_true_idx);
 
-% Converti le coordinate mondo della maschera in indici intrinseci del DTM
+% Convert their world coordinates into intrinsic indices of the DTM
 [col_in_dtm, row_in_dtm] = R_dtm.worldToIntrinsic(x_mask_true, y_mask_true);
 
-% Arrotonda agli indici interi
+% Round to integer indices
 col_in_dtm = round(col_in_dtm);
 row_in_dtm = round(row_in_dtm);
 
-% Filtra indici fuori dai limiti del DTM
+% Discard indices outside the DTM
 valid = col_in_dtm >= 1 & col_in_dtm <= size(raster_dtm,2) & ...
         row_in_dtm >= 1 & row_in_dtm <= size(raster_dtm,1);
 
 col_in_dtm = col_in_dtm(valid);
 row_in_dtm = row_in_dtm(valid);
 
-% Costruisci mask_extended usando indici lineari
+% Build mask_extended with linear indices
 mask_extended = false(size(raster_dtm));
 lin_idx = sub2ind(size(raster_dtm), row_in_dtm, col_in_dtm);
 mask_extended(lin_idx) = true;
 
-% Verifica: campiona alcuni punti TRUE e controlla che le coordinate coincidano
-sample_idx = mask_true_idx(1:100:end);  % ogni 100 pixel veri
+% Check: sample some TRUE pixels and verify that the coordinates match
+sample_idx = mask_true_idx(1:100:end);  % one TRUE pixel every 100
 x_check = xw_mask(sample_idx);
 y_check = yw_mask(sample_idx);
 
@@ -1000,7 +999,7 @@ y = y_matrix(mask_valid);
 z = z_rect_all_matrix(mask_valid);
 fig = figure;
 scatter(x, y, 10, z, 'filled');
-clim_riverbed = prctile(z, [1 99]);   % percentili invece di min e max puri, robusto a residui outlier isolati
+clim_riverbed = prctile(z, [1 99]);   % percentiles instead of min/max: robust to isolated outliers
 caxis(clim_riverbed);
 ylabel(colorbar, 'Z (m)');
 xlabel('X'); ylabel('Y');
@@ -1020,9 +1019,9 @@ zq = F(xq, yq);  % Interpolation over the grid
 % Correction
 raster_dtm_corrected = raster_dtm;
 
-% Non alzare mai il fondo sopra la quota LiDAR originale: il modello deve
-% solo aggiungere informazione batimetrica (approfondire), mai sovrascrivere
-% verso l'alto quota che il LiDAR ha già misurato correttamente.
+% Never raise the bed above the original LiDAR elevation: the model only adds
+% bathymetric information (deepening), it never overwrites upwards what the
+% LiDAR has already measured.
 n_would_raise = nnz(mask_extended & (zq > raster_dtm));
 
 zq_safe = min(zq, raster_dtm);
@@ -1039,7 +1038,7 @@ caxis(prctile(valid_vals, [1 99]));
 cb = colorbar;
 ylabel(cb, 'Z (m)');
 xlabel('X'); ylabel('Y');
-title('DTM after bathymentric correction');
+title('DTM after bathymetric correction');
 save_fig(fig, save_figures, out_fig_hydro, 'HM_DTM_corrected');
 
 %% Bathymetric correction map - DoD
@@ -1047,14 +1046,14 @@ DoD = raster_dtm - raster_dtm_corrected;
 
 fig = figure;
 imAlpha = true(size(DoD));
-imAlpha(DoD == 0 | isnan(DoD)) = false;   % trasparente dove non è stata applicata alcuna correzione
+imAlpha(DoD == 0 | isnan(DoD)) = false;   % transparent where no correction was applied
 
 imagesc(R_dtm.XWorldLimits, R_dtm.YWorldLimits, DoD, 'AlphaData', imAlpha);
-set(gca, 'Color', 'white');           % sfondo bianco sotto le parti trasparenti
+set(gca, 'Color', 'white');           % white background under the transparent pixels
 axis image;
 colormap(parula);
 nz = DoD(DoD > 0 & ~isnan(DoD));
-L = prctile(nz, 98);      % dinamico, robusto a residui pixel estremi
+L = prctile(nz, 98);      % dynamic limit, robust to isolated extreme pixels
 caxis([0 L]);
 cb = colorbar;
 ylabel(cb, 'ΔZ (m)');
@@ -1072,27 +1071,27 @@ is_bif_conf = ismember(all_centerlines(:,1), bif_ids) | ismember(all_centerlines
 z_coords_check = all_centerlines(:,4);
 residuo_formula = z_rect_all - (z_coords_check - h_rect_all);
 inconsistenti = find(abs(residuo_formula) > 0.01 & ~is_bif_conf);
-fprintf('%d punti (canale singolo) dove z_rect NON è coerente con z_coords - h_rect\n', numel(inconsistenti));
+fprintf('%d points (single channel) where z_rect is NOT consistent with z_coords - h_rect\n', numel(inconsistenti));
 if ~isempty(inconsistenti)
     disp(all_centerlines(inconsistenti(1:min(10,end)), [1 6]))
 end
 
-% outlier_flags è la variabile prodotta dal blocco "clean anomalous single values"
+% outlier_flags is produced by the block "Clean anomalous single values"
 righe_pulite = find(outlier_flags);
-righe_inconsistenti = inconsistenti;  % dal controllo di coerenza precedente
+righe_inconsistenti = inconsistenti;  % from the previous consistency check
 
-fprintf('Righe pulite dal blocco anomalie: %d\n', numel(righe_pulite));
-fprintf('Righe inconsistenti trovate ora: %d\n', numel(righe_inconsistenti));
-fprintf('Sovrapposizione: %d\n', numel(intersect(righe_pulite, righe_inconsistenti)));
+fprintf('Rows cleaned by the anomaly block: %d\n', numel(righe_pulite));
+fprintf('Inconsistent rows found now: %d\n', numel(righe_inconsistenti));
+fprintf('Overlap: %d\n', numel(intersect(righe_pulite, righe_inconsistenti)));
 
-% La quota di fondo corretta deve scendere (o restare piatta) andando verso valle,
-% con tolleranza per rumore locale — un salto in salita ampio e isolato è sospetto
-fprintf('%-8s %-12s %-16s\n', 'Tronco', 'N_risalite', 'Max_risalita_m');
+% The corrected bed elevation must decrease (or stay flat) downstream, with a
+% tolerance for local noise: a large, isolated upward jump is suspicious
+fprintf('%-8s %-12s %-16s\n', 'Segment', 'N_rises', 'Max_rise_m');
 for t = unique(all_centerlines(:,6))'
     idx = find(all_centerlines(:,6) == t);
     if numel(idx) < 3, continue; end
     dz = diff(z_rect_all(idx));
-    rises = dz(dz > 1);   % soglia 1 m, adatta se troppo/poco sensibile
+    rises = dz(dz > 1);   % 1 m threshold, adjust if too/not sensitive enough
     if ~isempty(rises)
         fprintf('%-8d %-12d %-16.2f\n', t, numel(rises), max(rises));
     end
@@ -1100,29 +1099,29 @@ end
 
 %% Diagnostics (specific to the 2025 network)
 if run_diagnostics
-    % Anomalia tronco 12
+    % Anomaly of segment 12
     idx = find(all_centerlines(:,6) == 12);
     if numel(idx) > 1
         dz = diff(z_rect_all(idx));
         [max_dz, k] = max(dz);
         row_prev = idx(k); row_next = idx(k+1);
 
-        fprintf('Tronco 12: salto max = %.2f m tra ID %d e ID %d\n', max_dz, ...
+        fprintf('Segment 12: max jump = %.2f m between ID %d and ID %d\n', max_dz, ...
             all_centerlines(row_prev,1), all_centerlines(row_next,1));
 
-        % Contesto: qualche sezione prima e dopo il salto
+        % Context: a few sections before and after the jump
         ctx = max(1,k-3):min(numel(idx),k+3);
         T = table(all_centerlines(idx(ctx),1), widths_all(idx(ctx)), sect_slope(idx(ctx)), ...
             Q_map(idx(ctx)), h_rect_all(idx(ctx)), z_rect_all(idx(ctx)), ...
             ismember(all_centerlines(idx(ctx),1), bif_ids), ...
             ismember(all_centerlines(idx(ctx),1), conf_ids), ...
-            'VariableNames', {'ID','width','slope','Q','h_rect','z_rect','e_bif','e_conf'});
+            'VariableNames', {'ID','width','slope','Q','h_rect','z_rect','is_bif','is_conf'});
         disp(T)
     end
 
-    tronchi_sospetti = [19 26 30 32 35 38 39];   % 12 già gestito sopra
+    tronchi_sospetti = [19 26 30 32 35 38 39];   % 12 already handled above
 
-    fprintf('\n%-8s %-12s %-14s %-14s\n', 'Tronco', 'Salto_prima', 'Salto_w7', 'Esito');
+    fprintf('\n%-8s %-12s %-14s %-14s\n', 'Segment', 'Jump_before', 'Jump_w7', 'Outcome');
     for t = tronchi_sospetti
         idx_t = find(all_centerlines(:,6) == t);
         if numel(idx_t) < 7, continue; end
@@ -1134,9 +1133,9 @@ if run_diagnostics
         salto_dopo = max(abs(diff(z_test)));
 
         if salto_dopo < 1.0
-            esito = 'OK - oscillazione, applicare smoothing';
+            esito = 'OK - oscillation, apply smoothing';
         else
-            esito = 'DA ISPEZIONARE MANUALMENTE (causa diversa)';
+            esito = 'TO BE INSPECTED MANUALLY (other cause)';
         end
         fprintf('%-8d %-12.2f %-14.2f %-14s\n', t, salto_prima, salto_dopo, esito);
     end
@@ -1147,56 +1146,56 @@ if run_diagnostics
         z0 = all_centerlines(idx_t, 4);
         for w = [7 9 11]
             z_test = movmedian(z0, w);
-            fprintf('Tronco %d, w=%d: salto residuo = %.2f m\n', t, w, max(abs(diff(z_test))));
+            fprintf('Segment %d, w=%d: residual jump = %.2f m\n', t, w, max(abs(diff(z_test))));
         end
     end
 
     for t = [32 35]
         idx = find(all_centerlines(:,6) == t);
         if numel(idx) < 2, continue; end
-        dz = diff(all_centerlines(idx,4));   % uso z_coords grezzo, non ancora smussato, per vedere la causa originale
+        dz = diff(all_centerlines(idx,4));   % raw z_coords, not smoothed yet, to see the original cause
         [max_dz, k] = max(abs(dz));
         row_prev = idx(k); row_next = idx(k+1);
-        fprintf('\nTronco %d: salto max = %.2f m tra ID %d e ID %d\n', t, dz(k), ...
+        fprintf('\nSegment %d: max jump = %.2f m between ID %d and ID %d\n', t, dz(k), ...
             all_centerlines(row_prev,1), all_centerlines(row_next,1));
         ctx = max(1,k-3):min(numel(idx),k+3);
         T = table(all_centerlines(idx(ctx),1), widths_all(idx(ctx)), sect_slope(idx(ctx)), ...
             Q_map(idx(ctx)), h_rect_all(idx(ctx)), z_rect_all(idx(ctx)), ...
             ismember(all_centerlines(idx(ctx),1), bif_ids), ...
             ismember(all_centerlines(idx(ctx),1), conf_ids), ...
-            'VariableNames', {'ID','width','slope','Q','h_rect','z_rect','e_bif','e_conf'});
+            'VariableNames', {'ID','width','slope','Q','h_rect','z_rect','is_bif','is_conf'});
         disp(T)
     end
-    % il tratto 32 ha solo bisogno di una finestra di smussamento maggiore
-    % il tratto 35 da attenzionare singolarmente
+    % segment 32 only needs a wider smoothing window
+    % segment 35 needs to be checked individually
 
-    % ID168 è l'inizio del tronco 8: controlla se è registrato come nodo di confluenza
+    % ID 168 is the start of segment 8: check whether it is registered as a confluence node
     match = find(conf_ids == 168);
     if ~isempty(match)
         branch_ids = conf_info{match,2};
-        fprintf('Confluenza al nodo %d: rami a monte = %s\n', 168, mat2str(branch_ids(:)'));
+        fprintf('Confluence at node %d: upstream branches = %s\n', 168, mat2str(branch_ids(:)'));
         for b = branch_ids(:)'
             tronco_b = all_centerlines(all_centerlines(:,1)==b, 6);
-            fprintf('  Ramo ID %d -> tronco %d\n', b, tronco_b);
+            fprintf('  Branch ID %d -> segment %d\n', b, tronco_b);
         end
     else
-        fprintf('ID 168 non trovato in conf_info come nodo di confluenza esplicito.\n');
+        fprintf('ID 168 not found in conf_info as an explicit confluence node.\n');
     end
 
-    % In sospeso
+    % Pending checks
     for t = [6 7]
         row_start = find(all_centerlines(:,6)==t, 1, 'first');
         if isempty(row_start), continue; end
         seg_idx = find(sections_ids(:,1) == all_centerlines(row_start,1));
         up = predecessor{seg_idx};
         if isempty(up)
-            fprintf('Tronco %d: NESSUN predecessore (testata di rete reale)\n', t);
+            fprintf('Segment %d: NO predecessor (actual network head)\n', t);
         else
             tronco_predecessore = codes_by_section(up);
-            fprintf('Tronco %d: predecessore = riga %d -> TRONCO CODICE %d\n', t, up, tronco_predecessore);
+            fprintf('Segment %d: predecessor = row %d -> SEGMENT CODE %d\n', t, up, tronco_predecessore);
         end
     end
-    % Segui la catena di predecessori fino alla vera testata di rete, stampando Q a ogni passaggio
+    % Follow the chain of predecessors up to the actual network head, printing Q at each step
     t = 7;
     while any(all_centerlines(:,6)==t)
         row_start = find(all_centerlines(:,6)==t, 1, 'first');
@@ -1204,11 +1203,11 @@ if run_diagnostics
         seg_idx = find(sections_ids(:,1) == all_centerlines(row_start,1));
         up = predecessor{seg_idx};
         if isempty(up)
-            fprintf('Tronco %d (TESTATA DI RETE): Q = %.4f\n', t, Q_t);
+            fprintf('Segment %d (NETWORK HEAD): Q = %.4f\n', t, Q_t);
             break
         end
         t_up = codes_by_section(up(1));
-        fprintf('Tronco %d: Q = %.4f  <-  predecessore tronco %d\n', t, Q_t, t_up);
+        fprintf('Segment %d: Q = %.4f  <-  predecessor segment %d\n', t, Q_t, t_up);
         t = t_up;
     end
 end
@@ -1217,16 +1216,16 @@ end
 %% VALIDATION
 %% ============================================================
 [Tstats, Tsec] = validation_gnss_mean(fullfile(input_dir, gnss_file), raster_dtm, raster_dtm_corrected, R_dtm, mask_extended, out_val)
-% RMSE/MAE migliorano (il modello corregge bene gli errori grandi e sistematici),
-% ma introduce una dispersione "tipica" propria che il metodo di rettangolarizzazione da solo non spiega.
+% RMSE/MAE improve (the model corrects the large, systematic errors well),
+% but it introduces its own "typical" scatter, which the rectangularisation alone does not explain.
 
 if run_diagnostics
-    x0 = 406750; y0 = 5010300;   % approssima dalle coordinate della tabella s006
+    x0 = 406750; y0 = 5010300;   % approximate coordinates of station s006
     dmat = sqrt((x_matrix - x0).^2 + (y_matrix - y0).^2);
     hit_rows = find(min(dmat, [], 2, 'omitnan') < 60);
     T = table(all_centerlines(hit_rows,1), all_centerlines(hit_rows,6), all_centerlines(hit_rows,4), ...
         widths_all(hit_rows), sect_slope(hit_rows), Q_map(hit_rows), h_rect_all(hit_rows), z_rect_all(hit_rows), ...
-        'VariableNames', {'ID','tronco','z_coords','width','slope','Q','h_rect','z_rect'});
+        'VariableNames', {'ID','segment','z_coords','width','slope','Q','h_rect','z_rect'});
     disp(T)
 end
 

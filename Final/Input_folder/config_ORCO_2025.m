@@ -33,7 +33,7 @@ forced_bifurcations = [35 34 36;
 forced_confluences = zeros(0, 3);
 
 % Targeted smoothing of segments with systematic oscillation of z
-segments_to_smooth = struct('tronco', {12, 19, 26, 30, 38, 39, 32}, ...
+segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
                             'window', {7,  7,  7,  7,  7,  7,  9});
 
 %% Hydraulic module
