@@ -1,4 +1,4 @@
-%% 0_ORCO_bifurcations.m - Morphodynamic module of the bathymetric correction (Orco river)
+%% ORCO_bifurcations.m - Morphodynamic module of the bathymetric correction (Orco river)
 %
 % Reconstructs the bed elevation of the wet area of the Orco river from
 % fractional sediment transport at equilibrium and corrects the LiDAR DTM.
