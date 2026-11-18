@@ -627,7 +627,38 @@ Per misurare la sensibilità del nodo alla larghezza, il run è stato ripetuto s
 - **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico; $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) va eventualmente calibrato sull'Orco.
 - **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s).
 - **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$.
-- **Validazione** del DTM corretto con il run di riferimento (larghezze bankfull) contro GNSS e ADCP, rispetto al DTM grezzo e al modulo idraulico.
+- **Validazione:** quella contro i punti GNSS è fatta (§9.5); resta da aggiungere il confronto con i dati ADCP.
+
+### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
+
+**Dati e metodo.** I DTM corretti dal modulo idraulico e dal modulo morfodinamico (run di riferimento con le larghezze bankfull) sono confrontati con i punti GNSS del 07/03/2025 con `validation_gnss_mean.m`: 48 profili di misura, 956 punti dentro l'area corretta. Per ogni punto il residuo è la quota del DTM nella posizione del punto meno la quota media del suo profilo (quota ellissoidica), perché il modello assegna una sola quota a tutta la sezione; un residuo positivo indica un DTM più alto del fondo misurato. Ogni profilo è assegnato al tratto della centerline più vicino (distanza media al massimo 18 m) e classificato con la topologia della rete:
+
+- **canale singolo:** tratti che portano tutta la portata della rete (tratti 0, 3, 8, 14): 8 profili;
+- **primo tratto a valle di una biforcazione:** 18 profili;
+- **altri tratti della rete a canali multipli:** 22 profili.
+
+**Risultati** (residui in metri, punti dentro l'area corretta):
+
+| Tipo di tratto | Profili / punti | DTM grezzo ME / RMSE | Modulo idraulico ME / RMSE / MAE | Modulo morfodinamico ME / RMSE / MAE |
+| --- | --- | --- | --- | --- |
+| Canale singolo | 8 / 147 | 0.44 / 0.47 | −0.05 / 0.54 / 0.31 | −0.07 / 0.55 / 0.31 |
+| Canale singolo senza s006 | 7 / 130 | 0.47 / 0.49 | 0.13 / 0.21 / 0.16 | 0.11 / 0.20 / 0.15 |
+| Primo tratto a valle di una biforcazione | 18 / 384 | 0.54 / 0.57 | 0.24 / 0.32 / 0.26 | 0.26 / 0.33 / 0.27 |
+| Altri tratti a canali multipli | 22 / 425 | 0.61 / 0.66 | 0.19 / 0.36 / 0.28 | 0.21 / 0.37 / 0.30 |
+| Tutti | 48 / 956 | 0.56 / 0.60 | 0.17 / 0.38 / 0.28 | 0.19 / 0.39 / 0.29 |
+| Tutti senza s006 | 47 / 939 | 0.56 / 0.60 | 0.20 / 0.33 / 0.26 | 0.22 / 0.34 / 0.27 |
+
+Intervalli di confidenza al 95% (bootstrap) dell'RMSE su tutti i punti: 0.349–0.406 m per il modulo idraulico, 0.361–0.419 m per il modulo morfodinamico. Riduzione dell'RMSE rispetto al DTM grezzo: 0.22 m (0.19–0.25) e 0.21 m (0.18–0.24).
+
+**Confronto profilo per profilo.** Il DTM corretto dai due moduli differisce di più di 1 mm in 954 punti su 1002, di più di 5 cm in 108 punti, al massimo di 12 cm. Le differenze non si limitano ai profili vicini ai nodi: la ripartizione della portata a una biforcazione cambia i tiranti in tutti i tratti a valle, fino alla confluenza successiva. In 29 profili su 48 la differenza media supera 2 cm; in 25 di questi è più vicino ai GNSS il modulo idraulico, in 4 il modulo morfodinamico (s019, s020, s022, s047). Nella maggior parte dei profili il modulo morfodinamico alza il fondo di 2–8 cm (meno portata nel ramo, quindi tirante minore): poiché il fondo corretto è già in media più alto di quello misurato, questo peggiora leggermente il residuo.
+
+**Conclusioni.**
+
+1. **Entrambi i moduli migliorano nettamente il DTM grezzo:** l'RMSE scende da 0.60 a 0.38–0.39 m e l'errore sistematico da +0.56 a +0.17–0.19 m.
+2. **Il modulo morfodinamico non è distinguibile dal modulo idraulico** sull'insieme dei punti: la differenza di RMSE (+1.3 cm) è ben dentro gli intervalli di confidenza. È leggermente peggiore nei tratti a canali multipli (+1.5 cm di RMSE) e leggermente migliore nel canale singolo senza il profilo s006 (−0.7 cm).
+3. **L'errore dominante è sistematico e non dipende dal nodo:** nei tratti a canali multipli il DTM corretto resta in media 0.19–0.26 m sopra il fondo misurato, nel canale singolo 0.11–0.13 m (senza s006). I tiranti calcolati sono quindi sottostimati soprattutto nella rete a canali multipli; le cause da verificare sono la scabrezza (n = 0.03 costante), la ripartizione della portata e le larghezze della maschera nei rami stretti. Le differenze tra i due moduli (al massimo 12 cm) sono più piccole di questo errore, per cui la validazione GNSS da sola non può dire quale ripartizione ai nodi sia più corretta.
+4. **Il profilo s006** (residuo di circa −1.9 m, tratto 8, a valle della confluenza 168) è uguale nei due moduli e domina l'RMSE del canale singolo: va verificato separatamente (pendenza del tratto 5.6·10⁻⁴, possibile errore locale del DTM o del rilievo).
+5. **Conseguenza.** Allo stato attuale il contributo del modulo morfodinamico non è un miglioramento dell'accuratezza del fondo, ma la coerenza fisica della ripartizione di acqua e sedimento ai nodi (equilibrio, selezione granulometrica). Per misurarne l'effetto sull'accuratezza servono dati che distinguano la ripartizione tra i rami, come le misure ADCP di portata nei rami, oppure la riduzione dell'errore sistematico comune ai due moduli.
 
 ---
 
@@ -639,3 +670,4 @@ Per misurare la sensibilità del nodo alla larghezza, il run è stato ripetuto s
 | 09/10/2026 | Spostato nel repo GitHub (`docs/`): da qui in poi la versione di riferimento è questa. |
 | 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte" e la sezione 8 "Domande per Carlo". |
 | 18/11/2026 | Aggiunta la sezione 9 "Aggiornamento del modulo morfodinamico": modifiche introdotte nel codice il 12/10/2026 e il 18/11/2026, risultati del run del 18/11/2026 e test di sensitività alla larghezza. |
+| 18/11/2026 | Aggiunta la §9.5: validazione GNSS del modulo idraulico e del modulo morfodinamico, per tipo di tratto e profilo per profilo. |
