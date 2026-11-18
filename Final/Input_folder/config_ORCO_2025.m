@@ -1,8 +1,7 @@
 %% CONFIG_ORCO_2025  Parameters of the ORCO 2025 run
-% Read by Preprocessing_HydraulicModule.m (and later by the morphodynamic
-% module). Everything that was hard-coded or typed with input() in
-% 0_2025_ORCO_modifiche.mlx is collected here, so that a run can be repeated
-% without interaction (e.g. matlab -batch).
+% Read by Preprocessing_HydraulicModule.m and MorphodynamicModule.m. All the
+% parameters of a run are collected here, so that it can be repeated without
+% interaction (e.g. matlab -batch).
 
 run_tag = '2025';           % used in all output file names
 
@@ -45,7 +44,40 @@ Q_upstream = 10.8;          % Discharge SAN BENIGNO ORCO [m^3/s]
 level_upstream = 0.695;     % Water level SAN BENIGNO ORCO [m] from most recent (2023) rating curve
 slope_min = 1.6e-4;         % minimum slope assigned to a river segment
 
+%% Morphodynamic module
+% Grain size of the bed surface: sieves [mm] and percent passing of the
+% field samples (one row per sample: Pratoregio 28/02/2019, San Benigno 18/03/2019)
+grain_sieves_mm = [2 4 8 16 32 64 90 128 256 512 1024 2048];
+grain_passing   = [10.80 10.80 10.80 13.20 28.00 56.00 72.40 87.60 100.00 100.00 100.00 100.00;
+                    0.25  0.25  0.25  0.25  7.25 47.75 70.25 86.50  99.25 100.00 100.00 100.00];
+d_F_rep_mm = 1;             % representative diameter of the fine class (< 2 mm) [mm]
+d_ref = 0.001;              % reference diameter of the phi scale [m]
+rho = 1000;                 % water density [kg/m^3]
+delta = 1.65;               % submerged relative density (rho_s - rho)/rho
+teta_r = 0.036;             % Wilcock & Crowe reference Shields number
+tau_star_critical = 0.03;   % critical Shields number
+bankfull_factor = 1.62;     % bankfull Shields number = bankfull_factor * tau_star_critical
+alpha = 4;                  % length of the cells upstream of the node = alpha*W0
+r = 0.65;                   % Ikeda coefficient of the transverse gravitational flux
+% Slope of the mother at the nodes (fit of the water surface upstream of the node)
+L_node = 400;               % window length [m]
+L_node_min = 100;           % minimum usable window length [m]
+L_node_max = 1600;          % the window is doubled up to this length [m]
+n_min_node = 5;             % minimum number of centerline points in the window
+S_floor_prctile = 0.05;     % valid slopes are raised to this percentile of the segment slopes
+S_fallback_prctile = 0.25;  % slope used when no valid window slope exists
+% Bankfull widths on the transect (W_bankfull_from_dtm)
+transect_ds = 0.5;          % sampling step [m]
+transect_half_len = 100;    % half-length of the transect [m]
+spill_band = 3;             % bank tops searched between W_mask/2 and spill_band*W_mask
+node_width_source = 'dtm';  % 'dtm' = bankfull widths (method); 'mask' = flight widths (sensitivity test only)
+% Node solver
+psi_start = [0.10 0.25 0.40 0.60 0.75 0.90];   % starting shares of discharge to branch 1
+D_start   = [0.6 1.0 1.4];                     % starting branch depths, multiples of D0
+psi_margin = 0.01;          % a physical solution has psi_margin < psi < 1 - psi_margin
+tol_res = 1e-8;             % maximum residual norm of an accepted solution
+
 %% Run options
-interactive = false;        % true = ask flips/bifurcations/confluences with input() as in the original
+interactive = false;        % true = ask flips/bifurcations/confluences with input()
 save_figures = true;        % save every figure as PNG in Output_folder
-run_diagnostics = true;     % run the diagnostic sections at the end of the hydraulic module
+run_diagnostics = true;     % run the diagnostic sections of the hydraulic and morphodynamic modules
