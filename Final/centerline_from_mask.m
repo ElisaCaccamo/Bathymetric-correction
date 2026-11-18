@@ -1,4 +1,4 @@
-function [cl, Icl] = centerline_from_mask_modifiche(I, es, W_px, plotornot)
+function [cl, Icl] = centerline_from_mask(I, es, W_px, plotornot)
 
 % Computes a centerline from an input binary channel mask. If the mask is a
 % multi-threaded channel, the "holes" between channel threads are filled
