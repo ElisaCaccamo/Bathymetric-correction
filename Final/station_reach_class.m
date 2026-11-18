@@ -1,4 +1,4 @@
-function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecessor, bif_info, conf_info, network_root, topo_order)
+function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecessor, bif_info, conf_info, network_root, topo_order, no_flow_segments)
 % STATION_REACH_CLASS  Assign every GNSS station to a river segment and to a
 % reach type of the network.
 %
@@ -19,12 +19,16 @@ function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecesso
 %      head) to the reference section;
 %   4) the flow fraction of each segment is a topological count of threads:
 %      1 at the network head, halved in each branch of a bifurcation, summed
-%      at a confluence (it is not a discharge);
+%      at a confluence (it is not a discharge). A segment without discharge
+%      at the flight (no_flow_segments) has fraction 0, and the other branch
+%      of its bifurcation keeps the whole fraction of the mother: that node is
+%      not a real split at the flight;
 %   5) reach type of the segment:
 %        'single channel'      flow fraction = 1
 %        'below bifurcation'   segment starting at a bifurcation
 %        'below confluence'    multi-thread segment starting at a confluence
 %        'other multi-thread'  any other multi-thread segment
+%        'no flow'             segment in no_flow_segments
 %
 % INPUTS
 %   Tpts             per-point table of validation_gnss_mean
@@ -36,11 +40,13 @@ function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecesso
 %   conf_info        cell {confluence_ID (first section downstream), [last_IDs upstream]}
 %   network_root     segment index of the network head
 %   topo_order       segment indices in topological order (upstream first)
+%   no_flow_segments (optional) codes of the segments without discharge at the flight
 %
 % OUTPUT
 %   S  table, one row per station, sorted along the network (topological
 %      order of the segments, then section ID)
 
+if nargin < 9, no_flow_segments = []; end
 N = size(all_centerlines, 1);
 assert(isequal(all_centerlines(:,1), (1:N)'), 'Section IDs must coincide with the row indices 1..N.');
 cx = all_centerlines(:,2);
@@ -52,9 +58,21 @@ for s = 1:nseg
 end
 
 %% Flow fraction and reach type of each segment
-bif_child = [];
+bif_child = [];      % first section of every bifurcation branch
+bif_sibling = [];    % first section of the other branch of the same bifurcation
 for b = 1:size(bif_info, 1)
-    bif_child = [bif_child, reshape(bif_info{b,2}, 1, [])]; %#ok<AGROW>
+    ch = reshape(bif_info{b,2}, 1, []);
+    bif_child = [bif_child, ch]; %#ok<AGROW>
+    bif_sibling = [bif_sibling, fliplr(ch)]; %#ok<AGROW>
+end
+no_flow_seg = ismember(all_centerlines(sections_ids(:,1), 6), no_flow_segments);
+% a branch is a real split only if the other branch of its bifurcation carries discharge
+real_split = false(nseg, 1);
+for s = 1:nseg
+    k = find(bif_child == sections_ids(s,1), 1);
+    if ~isempty(k)
+        real_split(s) = ~no_flow_seg(seg_of_row(bif_sibling(k)));
+    end
 end
 conf_ids = zeros(1, size(conf_info, 1));
 for c = 1:size(conf_info, 1)
@@ -64,21 +82,24 @@ frac = nan(nseg, 1);
 frac(network_root) = 1;
 for s = reshape(topo_order, 1, [])
     up = predecessor{s};
+    if no_flow_seg(s), frac(s) = 0; continue; end
     if s == network_root || isempty(up), continue; end
     fu = frac(up);
     fu = fu(isfinite(fu));
     if isempty(fu), continue; end
-    if ismember(sections_ids(s,1), bif_child)
+    if real_split(s)
         frac(s) = fu(1) / 2;          % branch of a bifurcation
     else
-        frac(s) = sum(fu);            % continuation or confluence
+        frac(s) = sum(fu);            % continuation, confluence, or branch whose sibling has no discharge
     end
 end
 class_seg = repmat({'other multi-thread'}, nseg, 1);
 for s = 1:nseg
-    if abs(frac(s) - 1) < 1e-9
+    if no_flow_seg(s)
+        class_seg{s} = 'no flow';
+    elseif abs(frac(s) - 1) < 1e-9
         class_seg{s} = 'single channel';
-    elseif ismember(sections_ids(s,1), bif_child)
+    elseif real_split(s)
         class_seg{s} = 'below bifurcation';
     elseif ismember(sections_ids(s,1), conf_ids)
         class_seg{s} = 'below confluence';

@@ -635,12 +635,12 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 | 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto | — |
 | 5 | **Validazione con i dati ADCP** (quella GNSS è nella §9.5) | da fare | — |
 | 6 | **Portata non conservata nel modulo idraulico:** il tratto 6 riceveva la portata del tratto 5 e da lì la rete portava 9.99 invece di 10.80 m³/s (§9.5) | corretto nel codice (`Final/Preprocessing_HydraulicModule.m`, la portata si propaga solo dentro lo stesso tratto) | rilanciare modulo idraulico, modulo morfodinamico e `ModuleComparison.m`; il bilancio della portata del modulo idraulico deve risultare chiuso a tutti i nodi |
-| 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | da decidere | portata nulla nei due rami alle condizioni del volo; come stimarne il fondo; come trattare i nodi 366 e 817 nel modulo morfodinamico alla portata bankfull |
+| 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | deciso e implementato in `Final` (`no_flow_segments = [15 16 29]`): portata nulla, fondo non ricostruito, nessun sistema del nodo a 366 e 817 | rilanciare; resta aperta, come estensione, la rete alla portata bankfull |
 | 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | da sistemare | verificare le cause (nodata dei DTM di segmento, riempimento, media lungo la sezione); poi $z_{DTM}$ dal DTM completo con nodata come NaN, mediana sui pixel bagnati, profilo monotono lungo il tratto |
 | 9 | **Stazioni GNSS ambigue** s003, s007, s015, s035 (punti su due tratti) | da verificare | assegnare il tratto a mano sulla mappa `GNSS_station_assignment.png` |
-| 10 | **Classe "a valle di una biforcazione":** 12 delle 18 stazioni sono nel tratto 30, lungo 1.8 km | da valutare | guardare la differenza tra i moduli in funzione della distanza dal nodo e, se serve, limitare la classe a una distanza massima |
+| 10 | **Classe "a valle di una biforcazione":** 12 delle 18 stazioni erano nel tratto 30, lungo 1.8 km | da rivalutare dopo il punto 7 (il tratto 30 diventa canale singolo) | con la nuova rete guardare quante stazioni restano per classe e la differenza tra i moduli in funzione della distanza dal nodo |
 | 11 | **Errore sistematico positivo** del DTM corretto (+0.17–0.26 m), più forte nella rete a canali multipli | aperto | verificare dopo i punti 6 e 7; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
-| 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni (`ModuleComparison.m`) | aperto | usare gli intervalli per stazione nel paper; decidere se aggiornare anche `validation_gnss_mean.m` |
+| 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`: RMSE, errore medio, mediana e NMAD con intervallo per stazione, riduzione dell'RMSE rispetto al DTM grezzo e differenza tra i moduli con intervallo appaiato | nel paper riportare questi intervalli al posto di quelli di `validation_gnss_mean.m` (vedi PaperBAT, 5.5) |
 | 13 | **Confronto dei due moduli da ripetere** (§9.5) | in attesa | dopo i punti 6, 7 e 8 |
 
 ### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
@@ -728,6 +728,14 @@ Ne segue che la rete cambia con la portata: alle condizioni del volo i due rami 
 - **Modulo morfodinamico:** va deciso come trattare i nodi 366 e 817 alla portata bankfull, quando i due rami sono attivi con una topologia diversa da quella del volo (escluderli dal sistema del nodo, oppure ricostruire la rete alla portata bankfull).
 - In tutti i casi la rete a valle dei tratti 17 e 30 torna a portare tutta la portata del volo.
 
+**Scelte adottate (18/11/2026).** Non ci sono altri rami fermi nella rete. Nel codice di `Final` i tratti 15, 16 e 29 sono elencati in `no_flow_segments` nel config, e i due moduli li trattano così:
+
+1. **portata nulla al volo:** alle biforcazioni 366 e 817 tutta la portata (e, nel modulo morfodinamico, tutto il trasporto solido con la composizione della madre) va all'altro ramo; il sistema del nodo non viene risolto (tipo di nodo "branch without discharge");
+2. **fondo non ricostruito:** tirante e fondo dei tre tratti non vengono calcolati e i loro pixel bagnati restano con il DTM grezzo (`exclude_no_flow_pixels.m`); nel paper vanno dichiarati come rami fermi al momento del volo, non ricostruiti (non ci sono stazioni GNSS);
+3. **portata bankfull:** la ricostruzione della rete alla portata formativa, in cui i rami sono attivi, resta un'estensione da discutere tra i limiti.
+
+Con la nuova rete i tratti 17, 20, 28, 30, 33 e 35 tornano a canale singolo (portano tutta la portata), per cui la classificazione delle stazioni per tipo di tratto della §9.5 cambia: per esempio le 12 stazioni del tratto 30 passano da "a valle di una biforcazione" a "canale singolo".
+
 ---
 
 ## Registro modifiche
@@ -743,3 +751,4 @@ Ne segue che la rete cambia con la portata: alle condizioni del volo i due rami 
 | 18/11/2026 | La §9.4 diventa la tabella di tutti i punti in sospeso (voci 6–13 nuove). Corretta nel codice la propagazione della portata del modulo idraulico (punto 6). |
 | 18/11/2026 | Aggiunte la §9.6 (quota di partenza $z_{DTM}$: problema, cause possibili, proposta) e la §9.7 (rami 16–15 e 29); aggiornati i punti 7 e 8 della §9.4; nota in testa alla §7 che rimanda alla §9.4. |
 | 18/11/2026 | §9.7 e punto 7 della §9.4: aggiunte le osservazioni sul campo sui rami 16–15 e 29 (quasi fermi al volo, attivi a portate più alte). |
+| 18/11/2026 | §9.7: scelte adottate per i rami 15, 16 e 29 (portata nulla, fondo non ricostruito, nessun sistema del nodo), implementate in `Final`. §9.4: aggiornati i punti 7, 10 e 12. |

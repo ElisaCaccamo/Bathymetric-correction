@@ -17,6 +17,10 @@
 %     solution closest to the share of the hydraulic module.
 % The bankfull split is applied to the discharge of the LiDAR flight; every
 % section is then computed with uniform flow, eta = z_DTM - D.
+% Segments without discharge at the flight (no_flow_segments in the config)
+% get Q = 0 and no bed; at their bifurcation the whole discharge and sediment
+% go to the other branch and the node system is not solved; their wet pixels
+% keep the raw DTM.
 % Theory, hypotheses and equations: docs/TeoriaMetodologica_moduli_idraulico_morfodinamico.md.
 %
 % Inputs:   Output_folder/02_HydraulicModule (workspace and corrected DTM of
@@ -176,7 +180,7 @@ node_solutions = cell(N,1);                     % all converged solutions of eac
 beta_all = NaN(N,1);                            % aspect ratio of the mother at bankfull, W0/(2*D0)
 theta_bf_all = NaN(N,1);                        % bankfull Shields number of the mother D0*S0/(delta*d_50)
 psi_all = NaN(N,1);                             % bankfull share of the water discharge to branch 1 (selected solution)
-bif_type_all = NaN(N,1);                        % 0 = fallback, 1 = balanced, 2 = asymmetric solution
+bif_type_all = NaN(N,1);                        % 0 = fallback, 1 = balanced, 2 = asymmetric solution, 3 = branch without discharge
 bif_nsol_all = NaN(N,1);                        % number of distinct physical solutions found
 % --- Quantities at the conditions of the LiDAR flight ---
 W_norm_all = NaN(N,1);                          % branch widths brought back to flight conditions
@@ -315,6 +319,15 @@ for kk = 1:numel(proc_order)
     is_conf  = ismember(id_i, conf_ids);
     is_child = ismember(id_i, bif_child_ids);
 
+    % ==================== SEGMENT WITHOUT DISCHARGE ====================
+    % Segments in no_flow_segments (config) carry no discharge at the flight:
+    % Q = 0, no depth, bed, transport or composition (NaN); the section is left
+    % out of the bed interpolation and of the DTM correction.
+    if ismember(all_centerlines(i,6), no_flow_segments)
+        Q_map(i) = 0;
+        continue
+    end
+
     % ==================== A) DISCHARGE AND COMPOSITION FROM UPSTREAM ====================
     if ~is_conf && isnan(Q_map(i))
         if is_segment_start(i)
@@ -443,6 +456,29 @@ for kk = 1:numel(proc_order)
     id2 = section_to_index(figlie(2));
     s1 = seg_of_row(id1);
     s2 = seg_of_row(id2);
+
+    % --- Node with a branch without discharge (no_flow_segments in the config) ---
+    % At the flight one branch carries no discharge, so there is no split of
+    % water and sediment: the whole discharge and sediment flux go to the other
+    % branch, which keeps the composition of the mother. The node system is not
+    % solved (bif_type_all = 3). At bankfull these branches are active with a
+    % different topology, which the network of the flight does not represent.
+    no_flow_child = ismember(all_centerlines([id1 id2], 6), no_flow_segments);
+    if any(no_flow_child)
+        share_Q = double(~no_flow_child(1));
+        Q_map(id1) = Q_map(i) * share_Q;
+        Q_map(id2) = Q_map(i) - Q_map(id1);
+        q_norm_all(id1) = Q_map(id1);
+        q_norm_all(id2) = Q_map(id2);
+        Qs_seg(s1,:) = Qs_seg(s_i,:) * share_Q;
+        Qs_seg(s2,:) = Qs_seg(s_i,:) - Qs_seg(s1,:);
+        f_seg_f([s1 s2]) = f_i_f;
+        psi_all(i) = share_Q;
+        bif_type_all(i) = 3;
+        fprintf('Bif %d: branch without discharge (no_flow_segments), whole discharge and sediment to the other branch\n', ...
+            section_mother);
+        continue
+    end
 
     % --- Slopes: S0 of the mother (window upstream of the node); the slopes
     % measured downstream of the node are stored for comparison only ---
@@ -783,7 +819,7 @@ if run_diagnostics
     %     module at flight conditions (used to choose among asymmetric
     %     solutions); nsol: number of distinct physical solutions; type:
     %     fallback / balanced / asymmetric.
-    type_names = {'fallback', 'balanced', 'asymmetric'};
+    type_names = {'fallback', 'balanced', 'asymmetric', 'branch without discharge'};
     fprintf('\nNode widths and solution\n');
     fprintf('%-6s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-8s %-6s %-6s %-7s %-5s %-9s %s\n', ...
         'Bif', 'W0m', 'W0bf', 'W1m', 'W2m', 'W1dtm', 'W2dtm', 'beta', 'Qbf', 'psi', 'W1/W0', ...
@@ -824,7 +860,8 @@ end
 
 % 4) Sections without a morphodynamic bed elevation
 no_bed = find(isnan(z_rect_morpho));
-fprintf('%d of %d sections without a morphodynamic bed elevation\n', numel(no_bed), N);
+fprintf('%d of %d sections without a morphodynamic bed elevation (%d of them in no_flow_segments)\n', ...
+    numel(no_bed), N, nnz(ismember(all_centerlines(no_bed,6), no_flow_segments)));
 if ~isempty(no_bed)
     fprintf('  segment codes involved: %s\n', mat2str(unique(all_centerlines(no_bed,6))'));
 end
@@ -925,6 +962,9 @@ row_in_dtm = row_in_dtm(valid);
 mask_extended = false(size(raster_dtm));
 lin_idx = sub2ind(size(raster_dtm), row_in_dtm, col_in_dtm);
 mask_extended(lin_idx) = true;
+% Segments without discharge (no_flow_segments): their wet pixels are not
+% corrected, the raw DTM is kept there
+mask_extended = exclude_no_flow_pixels(mask_extended, R_dtm, x_matrix, y_matrix, all_centerlines, no_flow_segments);
 
 % Check: sample some TRUE pixels and verify that the coordinates match after
 % the round trip mask -> DTM indices -> world coordinates

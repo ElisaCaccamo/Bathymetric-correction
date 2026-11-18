@@ -10,13 +10,37 @@ function [Tgroup, Tst] = compare_modules_gnss(T_hm, T_mm, S, all_centerlines, ou
 %
 % STATISTICS (one row per group: each reach type, all stations, and the same
 % groups without the stations in opts.exclude)
-%   RMSE and ME of the raw DTM, HM and MM, with 95% bootstrap intervals
-%   obtained by resampling STATIONS (cross-sections), not points: the points
-%   of a cross-section share the same reference elevation and are not
-%   independent, so resampling points gives intervals that are too narrow.
-%   dRMSE = RMSE_MM - RMSE_HM with a paired station bootstrap interval.
-%   n_MM_better = stations where the RMSE of MM is lower than that of HM,
-%   with the two-sided sign test p-value (paired comparison by station).
+%
+% Why the intervals resample STATIONS. All the points of a GNSS cross-section
+% (station) are compared with the same reference elevation, the station mean,
+% so their residuals are correlated: if the model is wrong at a cross-section,
+% it is wrong at all its points together. The independent units are the ~48
+% stations, not the ~950 points. A bootstrap that resamples single points
+% treats them as independent and gives intervals that are too narrow. Here
+% each bootstrap replicate draws stations with replacement and keeps all the
+% points of every drawn station (cluster bootstrap); the 95% interval is the
+% 2.5-97.5 percentile range of the statistic over the replicates.
+%
+% For each group, for the raw DTM, HM and MM:
+%   RMSE     root mean square error (sensitive to the few large residuals)
+%   ME       mean error = systematic error (bias); > 0: DTM too high
+%   Median   median error (robust estimate of the bias)
+%   NMAD     normalised median absolute deviation, 1.4826*median(|e - median(e)|):
+%            robust estimate of the spread, equal to the standard deviation
+%            for normal errors but not inflated by outliers (Hoehle & Hoehle,
+%            2009). The residuals here are not normal: a few stations
+%            (s006, s019, s020) carry large negative errors and weigh heavily
+%            on the RMSE, so RMSE alone overstates the typical error.
+%   all with their 95% station-bootstrap interval.
+% Paired comparisons (each replicate uses the SAME stations for the two
+% DTMs, so the part of the error that is common to both cancels out and the
+% interval of the difference is narrower than the two separate intervals):
+%   dRMSE_raw_HM, dRMSE_raw_MM  RMSE reduction of each module with respect to
+%                               the raw DTM (> 0: the correction improves the DTM)
+%   dRMSE_MM_HM                 RMSE_MM - RMSE_HM (< 0: MM closer to GNSS)
+%   n_MM_better, n_HM_better    stations where the RMSE of MM is lower / higher
+%                               than that of HM, with the two-sided sign test
+%                               p-value (is the split far from 50/50?)
 %
 % FIGURES (out_dir)
 %   GNSS_module_comparison.png
@@ -63,19 +87,23 @@ e1 = T_hm.res_corr;               % hydraulic module
 e2 = nan(size(e1));
 e2(tf) = T_mm.res_corr(loc(tf));  % morphodynamic module
 
-%% 2) Per-station sums (fast bootstrap)
+%% 2) Per-station data for the bootstrap
+% RMSE and ME of any set of stations follow from per-station sums (fast);
+% median and NMAD need the residuals themselves, kept per station in Ecell.
 stations = S.Station;  if ~iscell(stations), stations = cellstr(stations); end
 cls = S.reach_class;   if ~iscell(cls), cls = cellstr(cls); end
 ns = numel(stations);
 n  = zeros(ns,1);
-SS = zeros(ns,3);   % sum of squares  [raw HM MM]
-SM = zeros(ns,3);   % sum             [raw HM MM]
+SS = zeros(ns,3);   % sum of squared residuals  [raw HM MM]
+SM = zeros(ns,3);   % sum of residuals          [raw HM MM]
+Ecell = cell(ns,1); % residuals of the points of each station, one column per DTM
 for k = 1:ns
     sel = ok & strcmp(st_hm, stations{k});
     E = [e0(sel), e1(sel), e2(sel)];
     n(k) = nnz(sel);
     SS(k,:) = sum(E.^2, 1);
     SM(k,:) = sum(E, 1);
+    Ecell{k} = E;
 end
 rmse_st = sqrt(SS ./ n);
 me_st   = SM ./ n;
@@ -88,7 +116,7 @@ Tst = table(stations, cls, S.segment_code, n, me_st(:,1), me_st(:,2), me_st(:,3)
     'RMSE_raw','RMSE_HM','RMSE_MM','MM_minus_HM_cm','closer'});
 
 %% 3) Groups
-class_order = {'single channel','below bifurcation','below confluence','other multi-thread'};
+class_order = {'single channel','below bifurcation','below confluence','other multi-thread','no flow'};
 class_order = class_order(ismember(class_order, cls));
 excl = ismember(stations, opts.exclude);
 gname = {};  gsel = {};
@@ -107,32 +135,49 @@ if any(excl)
 end
 
 ng = numel(gname);
-R = nan(ng, 30);
-for g = 1:ng
-    idx = find(gsel{g});
-    m = numel(idx);
-    rm = sqrt(sum(SS(idx,:), 1) / sum(n(idx)));
-    me = sum(SM(idx,:), 1) / sum(n(idx));
-    rb = nan(opts.B, 3);  mb = nan(opts.B, 3);
-    for b = 1:opts.B
-        j = idx(randi(m, m, 1));
-        rb(b,:) = sqrt(sum(SS(j,:), 1) / sum(n(j)));
-        mb(b,:) = sum(SM(j,:), 1) / sum(n(j));
-    end
-    q = @(v) [prctile_simple(v, 2.5), prctile_simple(v, 97.5)];
-    dr = rb(:,3) - rb(:,2);
-    k_mm = nnz(rmse_st(idx,3) < rmse_st(idx,2));
-    k_hm = nnz(rmse_st(idx,3) > rmse_st(idx,2));
-    R(g,:) = [m, sum(n(idx)), rm, me, q(rb(:,1)), q(rb(:,2)), q(rb(:,3)), ...
-              q(mb(:,1)), q(mb(:,2)), q(mb(:,3)), rm(3) - rm(2), q(dr), ...
-              k_mm, k_hm, sign_test(k_mm, k_hm), ...
-              mean(dz_cm(idx)), min(dz_cm(idx)), max(dz_cm(idx)), nnz(abs(dz_cm(idx)) > 2)];
-end
 vn = {'N_stations','N_points','RMSE_raw','RMSE_HM','RMSE_MM','ME_raw','ME_HM','ME_MM', ...
       'RMSE_raw_lo','RMSE_raw_hi','RMSE_HM_lo','RMSE_HM_hi','RMSE_MM_lo','RMSE_MM_hi', ...
       'ME_raw_lo','ME_raw_hi','ME_HM_lo','ME_HM_hi','ME_MM_lo','ME_MM_hi', ...
       'dRMSE_MM_HM','dRMSE_lo','dRMSE_hi','n_MM_better','n_HM_better','p_sign_test', ...
-      'dz_mean_cm','dz_min_cm','dz_max_cm','n_abs_dz_over_2cm'};
+      'dz_mean_cm','dz_min_cm','dz_max_cm','n_abs_dz_over_2cm', ...
+      'Median_raw','Median_HM','Median_MM','NMAD_raw','NMAD_HM','NMAD_MM', ...
+      'Median_raw_lo','Median_raw_hi','Median_HM_lo','Median_HM_hi','Median_MM_lo','Median_MM_hi', ...
+      'NMAD_raw_lo','NMAD_raw_hi','NMAD_HM_lo','NMAD_HM_hi','NMAD_MM_lo','NMAD_MM_hi', ...
+      'dRMSE_raw_HM','dRMSE_raw_HM_lo','dRMSE_raw_HM_hi','dRMSE_raw_MM','dRMSE_raw_MM_lo','dRMSE_raw_MM_hi'};
+R = nan(ng, numel(vn));
+q = @(v) [prctile_simple(v, 2.5), prctile_simple(v, 97.5)];   % 95% percentile interval
+for g = 1:ng
+    idx = find(gsel{g});
+    m = numel(idx);
+    % statistics of the group (all its points together)
+    rm = sqrt(sum(SS(idx,:), 1) / sum(n(idx)));     % RMSE [raw HM MM]
+    me = sum(SM(idx,:), 1) / sum(n(idx));           % ME   [raw HM MM]
+    Eg = vertcat(Ecell{idx});
+    md = median(Eg, 1);                             % median
+    nm = nmad(Eg);                                  % NMAD
+    % station (cluster) bootstrap: draw m stations with replacement, keep all
+    % their points; the same draw is used for raw DTM, HM and MM (paired)
+    rb = nan(opts.B, 3);  mb = nan(opts.B, 3);  db = nan(opts.B, 3);  nb = nan(opts.B, 3);
+    for b = 1:opts.B
+        j = idx(randi(m, m, 1));
+        rb(b,:) = sqrt(sum(SS(j,:), 1) / sum(n(j)));
+        mb(b,:) = sum(SM(j,:), 1) / sum(n(j));
+        Eb = vertcat(Ecell{j});
+        db(b,:) = median(Eb, 1);
+        nb(b,:) = nmad(Eb);
+    end
+    % paired stations: who is closer to GNSS at each station
+    k_mm = nnz(rmse_st(idx,3) < rmse_st(idx,2));
+    k_hm = nnz(rmse_st(idx,3) > rmse_st(idx,2));
+    R(g,:) = [m, sum(n(idx)), rm, me, q(rb(:,1)), q(rb(:,2)), q(rb(:,3)), ...
+              q(mb(:,1)), q(mb(:,2)), q(mb(:,3)), ...
+              rm(3) - rm(2), q(rb(:,3) - rb(:,2)), ...          % MM - HM
+              k_mm, k_hm, sign_test(k_mm, k_hm), ...
+              mean(dz_cm(idx)), min(dz_cm(idx)), max(dz_cm(idx)), nnz(abs(dz_cm(idx)) > 2), ...
+              md, nm, q(db(:,1)), q(db(:,2)), q(db(:,3)), q(nb(:,1)), q(nb(:,2)), q(nb(:,3)), ...
+              rm(1) - rm(2), q(rb(:,1) - rb(:,2)), ...          % RMSE reduction of HM vs raw DTM
+              rm(1) - rm(3), q(rb(:,1) - rb(:,3))];             % RMSE reduction of MM vs raw DTM
+end
 Tgroup = array2table(R, 'VariableNames', vn);
 Tgroup.group = gname(:);
 
@@ -148,14 +193,30 @@ for g = 1:ng
 end
 fprintf('ME after each RMSE interval. MM - HM < 0: the morphodynamic module is closer to GNSS.\n');
 
+c = @(name) find(strcmp(vn, name));   % column of a statistic in R
+fprintf('\nRobust statistics (median error, NMAD) and RMSE reduction with respect to the raw DTM\n');
+fprintf('%-38s | %-30s | %-30s | %-30s | %-22s | %-22s\n', 'group', 'raw: median / NMAD', ...
+    'HM: median / NMAD', 'MM: median / NMAD', 'RMSE raw - HM', 'RMSE raw - MM');
+for g = 1:ng
+    r = R(g,:);
+    fprintf('%-38s', gname{g});
+    for d = {'raw','HM','MM'}
+        fprintf(' | %+.2f [%+.2f,%+.2f] / %.2f [%.2f-%.2f]', r(c(['Median_' d{1}])), r(c(['Median_' d{1} '_lo'])), ...
+            r(c(['Median_' d{1} '_hi'])), r(c(['NMAD_' d{1}])), r(c(['NMAD_' d{1} '_lo'])), r(c(['NMAD_' d{1} '_hi'])));
+    end
+    fprintf(' | %+.3f [%+.3f, %+.3f] | %+.3f [%+.3f, %+.3f]\n', r(c('dRMSE_raw_HM')), r(c('dRMSE_raw_HM_lo')), ...
+        r(c('dRMSE_raw_HM_hi')), r(c('dRMSE_raw_MM')), r(c('dRMSE_raw_MM_lo')), r(c('dRMSE_raw_MM_hi')));
+end
+fprintf('RMSE raw - module > 0: the correction improves the DTM; the interval is paired by station.\n');
+
 writetable(Tst, fullfile(out_dir, 'GNSS_module_comparison_stations.csv'));
 writetable(Tgroup, fullfile(out_dir, 'GNSS_module_comparison_groups.csv'));
 
 %% 4) Figure: panels A, B, C
 lab = regexprep(stations, '^[sS]', '');
 x = (1:ns)';
-band = containers.Map({'single channel','below bifurcation','below confluence','other multi-thread'}, ...
-    {[0.88 0.87 0.85], [1 1 1], [0.95 0.94 0.92], [0.92 0.91 0.89]});
+band = containers.Map({'single channel','below bifurcation','below confluence','other multi-thread','no flow'}, ...
+    {[0.88 0.87 0.85], [1 1 1], [0.95 0.94 0.92], [0.92 0.91 0.89], [0.97 0.97 0.97]});
 
 fig = figure('Color', 'w', 'Position', [60 60 1400 1050]);
 
@@ -228,8 +289,8 @@ legend(axC, hC, {'raw LiDAR DTM', 'hydraulic module', 'morphodynamic module', 'M
 exportgraphics(fig, fullfile(out_dir, 'GNSS_module_comparison.png'), 'Resolution', 200);
 
 %% 5) Figure: station assignment check
-mk = containers.Map({'single channel','below bifurcation','below confluence','other multi-thread'}, ...
-    {'s', '^', 'd', 'o'});
+mk = containers.Map({'single channel','below bifurcation','below confluence','other multi-thread','no flow'}, ...
+    {'s', '^', 'd', 'o', 'x'});
 fig2 = figure('Color', 'w', 'Position', [80 80 1400 650]);
 ax1 = axes('Position', [0.05 0.1 0.5 0.82]);  hold(ax1, 'on');
 plot(ax1, all_centerlines(:,2), all_centerlines(:,3), '.', 'Color', [0.75 0.75 0.75], 'MarkerSize', 4);
@@ -303,6 +364,13 @@ if isempty(x), v = NaN; return; end
 pos = 1 + (numel(x) - 1) * p / 100;
 lo = floor(pos);  hi = ceil(pos);
 v = x(lo) + (pos - lo) * (x(hi) - x(lo));
+end
+
+function v = nmad(E)
+% Normalised median absolute deviation of each column of E:
+% NMAD = 1.4826 * median(|e - median(e)|). The factor makes it equal to the
+% standard deviation for normally distributed errors.
+v = 1.4826 * median(abs(E - median(E, 1)), 1);
 end
 
 function p = sign_test(k1, k2)

@@ -1,7 +1,9 @@
 %% PREPROCESSING & HYDRAULIC MODULE (ORCO)
 % Builds the river network from the masks and DTMs of the river segments
 % (centerlines, cross-sections, widths, slopes, topology) and computes the
-% bed elevation of every cross-section with uniform flow. Reads every input
+% bed elevation of every cross-section with uniform flow. Segments without
+% discharge at the flight (no_flow_segments in the config) get Q = 0 and no
+% bed, and their wet pixels keep the raw DTM. Reads every input
 % from Input_folder and writes every output to Output_folder:
 %   Output_folder/01_Preprocessing     centerlines, widths, topology, figures
 %   Output_folder/02_HydraulicModule   riverbed elevation, depth, corrected DTM, DoD
@@ -717,6 +719,8 @@ bif_ids  = zeros(0,1);
 conf_ids = zeros(0,1);
 if ~isempty(bif_info),  bif_ids  = cell2mat(bif_info(:,1));  end
 if ~isempty(conf_info), conf_ids = cell2mat(conf_info(:,1)); end
+% Sections of the segments without discharge at the flight (no_flow_segments)
+no_flow_row = ismember(all_centerlines(:,6), no_flow_segments);
 %% For cycle for all sections
 row_idx_cell = arrayfun(@(s) find(all_centerlines(:,1) >= sections_ids(s,1) & ...
                      all_centerlines(:,1) <= sections_ids(s,2)), topo_order, 'UniformOutput', false);
@@ -725,6 +729,13 @@ is_segment_start = ismember(all_centerlines(:,1), sections_ids(:,1));
 
 for k = 1:n_points
     i = iter_rows(k);
+    % ----------------------- SEGMENT WITHOUT DISCHARGE -----------------------
+    % Q = 0 at the flight: depth and bed are not computed (NaN), so the
+    % section is left out of the bed interpolation and of the DTM correction.
+    if no_flow_row(i)
+        Q_map(i) = 0;
+        continue
+    end
     % ----------------------------- BIFURCATION -----------------------------
     if ismember(all_centerlines(i,1), bif_ids) % If bifurcation
         width = widths_all(i);
@@ -769,38 +780,53 @@ for k = 1:n_points
                           - (x(4) + x(2)^2 / (2 * g * (width2 * x(4))^2));
                 ];
 
-                idx_current = section_to_index(all_centerlines(i,1));
-                if ~all(isnan(h_rect_all(idx_current)))
-                    h_init = [h_rect_all(idx_current); h_rect_all(idx_current)];
-                else
-                    h_init = [level_upstream; level_upstream];
-                end
-
-                x0 = [Q_map(i)/2; Q_map(i)/2; h_init(1); h_init(2)];
-
-                options = optimoptions('fsolve', 'Display', 'iter', 'FunctionTolerance', 1e-8);
-
-                [x_sol, fval, exitflag] = fsolve(F, x0, options);
-
-                if exitflag > 0 && all(isreal(x_sol)) && all(x_sol > 0)
-                    Q1 = x_sol(1); Q2 = x_sol(2);
-                    h_rect1 = x_sol(3); h_rect2 = x_sol(4);
-                else
-                    warning('No physical solution for bifurcation in section %d', all_centerlines(i,1));
-                    disp('------ BIFURCATION FAILURE INFO ------');
-                    disp(['Section ID: ', num2str(all_centerlines(i,1))]);
-                    disp(['Widths: ', num2str([width1, width2])]);
-                    disp(['Slopes: ', num2str([slope1, slope2])]);
-                    disp(['Initial guess: ', num2str(x0')]);
-                    disp(['Solution: ', num2str(x_sol')]);
-                    disp(['fval: ', num2str(fval')]);
-                    % Fallback:one of the two branches is almost flat
-                    Q1 = Q_map(i) * width1 / (width1 + width2);
+                no_flow_child = no_flow_row([idx1 idx2]);
+                if any(no_flow_child)
+                    % One branch carries no discharge at the flight: the whole
+                    % discharge goes to the other branch (uniform flow), no
+                    % node system. The branch without discharge gets Q = 0 and
+                    % no depth (NaN).
+                    Q1 = Q_map(i) * double(~no_flow_child(1));
                     Q2 = Q_map(i) - Q1;
+                    h_rect1 = NaN;  h_rect2 = NaN;
+                    if Q1 > 0, h_rect1 = (Q1 / (width1 * (1/n_manning) * sqrt(slope1)))^(3/5); end
+                    if Q2 > 0, h_rect2 = (Q2 / (width2 * (1/n_manning) * sqrt(slope2)))^(3/5); end
+                    fprintf('Bifurcation %d: branch without discharge (no_flow_segments), whole discharge to the other branch\n', ...
+                        all_centerlines(i,1));
+                else
+                    idx_current = section_to_index(all_centerlines(i,1));
+                    if ~all(isnan(h_rect_all(idx_current)))
+                        h_init = [h_rect_all(idx_current); h_rect_all(idx_current)];
+                    else
+                        h_init = [level_upstream; level_upstream];
+                    end
 
-                    h_rect1 = (Q1 / (width1 * (1/n_manning) * sqrt(slope1)))^(3/5);
-                    h_rect2 = (Q2 / (width2 * (1/n_manning) * sqrt(slope2)))^(3/5);
-                end
+                    x0 = [Q_map(i)/2; Q_map(i)/2; h_init(1); h_init(2)];
+
+                    options = optimoptions('fsolve', 'Display', 'iter', 'FunctionTolerance', 1e-8);
+
+                    [x_sol, fval, exitflag] = fsolve(F, x0, options);
+
+                    if exitflag > 0 && all(isreal(x_sol)) && all(x_sol > 0)
+                        Q1 = x_sol(1); Q2 = x_sol(2);
+                        h_rect1 = x_sol(3); h_rect2 = x_sol(4);
+                    else
+                        warning('No physical solution for bifurcation in section %d', all_centerlines(i,1));
+                        disp('------ BIFURCATION FAILURE INFO ------');
+                        disp(['Section ID: ', num2str(all_centerlines(i,1))]);
+                        disp(['Widths: ', num2str([width1, width2])]);
+                        disp(['Slopes: ', num2str([slope1, slope2])]);
+                        disp(['Initial guess: ', num2str(x0')]);
+                        disp(['Solution: ', num2str(x_sol')]);
+                        disp(['fval: ', num2str(fval')]);
+                        % Fallback:one of the two branches is almost flat
+                        Q1 = Q_map(i) * width1 / (width1 + width2);
+                        Q2 = Q_map(i) - Q1;
+
+                        h_rect1 = (Q1 / (width1 * (1/n_manning) * sqrt(slope1)))^(3/5);
+                        h_rect2 = (Q2 / (width2 * (1/n_manning) * sqrt(slope2)))^(3/5);
+                    end
+                end   % branch without discharge / node system
                 % Save
                     Q_map(idx1) = Q1;
                     Q_map(idx2) = Q2;
@@ -985,6 +1011,9 @@ row_in_dtm = row_in_dtm(valid);
 mask_extended = false(size(raster_dtm));
 lin_idx = sub2ind(size(raster_dtm), row_in_dtm, col_in_dtm);
 mask_extended(lin_idx) = true;
+% Segments without discharge (no_flow_segments): their wet pixels are not
+% corrected, the raw DTM is kept there
+mask_extended = exclude_no_flow_pixels(mask_extended, R_dtm, x_matrix, y_matrix, all_centerlines, no_flow_segments);
 
 % Check: sample some TRUE pixels and verify that the coordinates match
 sample_idx = mask_true_idx(1:100:end);  % one TRUE pixel every 100

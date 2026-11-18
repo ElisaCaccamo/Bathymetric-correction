@@ -55,7 +55,7 @@ T_mm = readtable(rec_mm, 'TextType', 'char');
 
 %% 2. Stations, segments and reach types
 S = station_reach_class(T_hm, all_centerlines, ws_hm.sections_ids, ws_hm.predecessor, ...
-    ws_hm.bif_info, ws_hm.conf_info, ws_hm.network_root, ws_hm.topo_order);
+    ws_hm.bif_info, ws_hm.conf_info, ws_hm.network_root, ws_hm.topo_order, no_flow_segments);
 disp(S);
 fprintf('Stations with points on two segments (ambiguous): %s\n', strjoin(S.Station(S.ambiguous)', ', '));
 writetable(S, fullfile(out_cmp, 'GNSS_stations_reach_class.csv'));

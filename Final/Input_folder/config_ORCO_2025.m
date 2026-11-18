@@ -32,6 +32,14 @@ forced_bifurcations = [35 34 36;
 % [branch1 branch2 merging_branch]
 forced_confluences = zeros(0, 3);
 
+% Segments without discharge at the flight (codes as in the mask file names).
+% They hold still water but carry no appreciable discharge at the flight:
+% 15-16 are part of a meander only partly wet, 29 is disconnected from
+% segment 22 (connected only at higher discharges). Both modules assign them
+% Q = 0 (the whole discharge goes to the other branch of the node, no node
+% system), do not compute their depth and leave the raw DTM there.
+no_flow_segments = [15 16 29];
+
 % Targeted smoothing of segments with systematic oscillation of z
 segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
                             'window', {7,  7,  7,  7,  7,  7,  9});
