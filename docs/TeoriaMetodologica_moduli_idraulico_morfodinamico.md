@@ -522,6 +522,83 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 
 ---
 
+## 9. Aggiornamento del modulo morfodinamico (novembre 2026)
+
+Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_ORCO_bifurcationsNEW_modifiche_modifiche.mlx`) e il 18/11/2026 (`0_ORCO_bifurcations.m`) e i risultati dei run del 18/11/2026. Dove è in contrasto con le sezioni precedenti (in particolare §4.3, §5.2–5.3, §6, §7 e §8), vale quanto scritto qui; le sezioni precedenti saranno aggiornate in seguito.
+
+### 9.1 Modifiche al metodo
+
+**Pendenza della madre al nodo.** $S_0$ si ricalcola con una retta ai minimi quadrati sul pelo libero $z_{DTM}$ entro $L=400$ m a monte del nodo, proseguendo nel tratto a monte se necessario (a una confluenza, nel ramo con la portata maggiore). Se la retta non è utilizzabile (meno di 5 punti, finestra più corta di 100 m, pendenza nulla o negativa) la finestra si raddoppia fino a 1600 m; se non basta si usa il 25° percentile delle pendenze dei tratti. Una pendenza valida si alza solo se è sotto il 5° percentile. Le pendenze dei rami non sono più dati del nodo.
+
+**Tirante bankfull.** Il tirante di Shields si limita con il livello di sfioro del transetto e non scende mai sotto il tirante critico:
+
+$$
+D_0 = \max\Big(\min\big(D_S,\ z_{sfioro}-\eta_0\big),\ D_c\Big), \qquad
+D_S = \frac{1.62\,\theta^*_c\,\Delta\,d_{50}}{S_0}, \qquad
+D_c = \frac{\theta^*_c\,\Delta\,d_{50}}{S_0}
+$$
+
+$z_{sfioro}$ è il più basso dei due punti più alti del terreno, uno per lato, tra $W^m/2$ e $3W^m$ dalla centerline. Dove il tirante si ferma a $D_c$ (sponde basse) la larghezza resta quella misurata al livello di sfioro. Le larghezze dei rami si misurano con il tirante di Shields calcolato con $S_0$; se non sono calcolabili si usa il rapporto delle larghezze delle maschere.
+
+**Sistema del nodo in forma BRT (6 equazioni).** Come in Bolla Pittaluga et al. (2003) e Ragno et al. (2023), il pelo libero è comune al nodo e i due rami, di uguale lunghezza, terminano allo stesso livello: hanno quindi la stessa pendenza di equilibrio $S_b$, che è un'incognita. Incognite $[\psi, D_1, D_2, S_b, f_{1F}, f_{2F}]$ con $\psi=Q_1/Q_0$; equazioni:
+
+- moto uniforme in ciascun ramo, $\psi Q_0 = W_1 D_1^{5/3}\sqrt{S_b}/n$ e $(1-\psi) Q_0 = W_2 D_2^{5/3}\sqrt{S_b}/n$;
+- bilanci di cella per F e C (§4.4, eq. 4–5 di §5.2), con $\eta_1-\eta_2=D_2-D_1$;
+- continuità solida per F e C (eq. 6–7 di §5.2).
+
+L'equazione (8), $\eta_0=(\eta_1+\eta_2)/2$, e le pendenze imposte ai rami non si usano più. Motivo: il sistema di §5.2 non conteneva il moto uniforme nei rami. Con le pendenze misurate (rami 1.5–5 volte più ripidi della madre) non aveva soluzione; con la stessa pendenza nei tre rami dava una seconda soluzione in cui un ramo portava fino a 2.5 volte la portata compatibile con il suo tirante, e con rami di uguale larghezza non dava mai le soluzioni asimmetriche di BRT. La forma a 6 equazioni le ritrova: con rami uguali, sotto un rapporto di forma critico $\beta=W_0/(2D_0)\approx13$ esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche speculari.
+
+**Scelta della soluzione.** `fsolve` parte da 55 configurazioni e trova tutte le soluzioni fisiche. La soluzione bilanciata ($\psi=W_1/W_0$, $D_1=D_2=D_0$, $S_b=S_0$) esiste sempre: se è l'unica si adotta; se esistono soluzioni asimmetriche la bilanciata è instabile (BRT) e si adotta l'asimmetrica più vicina a $\psi_{hyd}$, la quota del ramo 1 nel modulo idraulico al volo ($Q_i^{hyd}\propto W_i^m h_i^{5/3}\sqrt{S_i}$ alla prima sezione dei rami).
+
+**Ritorno al volo.** $\psi$ e $\psi_x$ ripartiscono portata e flussi solidi del volo come in §4.3; la prima sezione di ogni ramo si calcola con il moto uniforme alla sua portata, come ogni altra sezione. Le quote bankfull $\eta_i=\eta_0+D_0-D_i$ restano una diagnostica: usate direttamente al volo davano fondi sopra il pelo libero in 5–7 nodi.
+
+### 9.2 Risultati del run di riferimento (larghezze bankfull)
+
+Volo del 17/03/2025, `node_width_source = 'dtm'`: al nodo tutte le larghezze sono quelle bankfull calcolate sul DTM corretto (§4.3), cioè l'area $A$ tra le sponde al livello bankfull divisa per il tirante bankfull, $W^{bf}=A/D_0$. È il run di riferimento: tirante, larghezza, portata e trasporto del nodo sono tutti in condizioni bankfull. Tutti i 12 nodi sono risolti dal sistema (residuo $\le10^{-15}$) e in tutti esistono la soluzione bilanciata e due asimmetriche, quindi tutti risultano asimmetrici. La pendenza di equilibrio dei rami è 0.61–0.99 volte $S_0$; in tutti i nodi il ramo con il fondo più basso ha la superficie più grossolana ($f_F$ minore), come atteso dal richiamo gravitativo lungo la pendenza trasversale. I dislivelli bankfull tra i rami arrivano a 1.4 m (584, 645). In 9 madri su 12 il tirante bankfull è quello critico ($\theta_{bf}=\theta_c$). Portata e flussi solidi si conservano a tutti i nodi; nessuna sezione resta senza quota.
+
+### 9.3 Quanto il risultato dipende dalla larghezza (test di sensitività)
+
+Per misurare la sensibilità del nodo alla larghezza, il run è stato ripetuto sostituendo le larghezze bankfull con quelle delle maschere del volo (`node_width_source = 'mask'`), lasciando invariati pendenze, tiranti bankfull, equazioni e regola di scelta. Questo secondo run **non è un'alternativa al metodo**: combina un tirante bankfull con una larghezza misurata a portata ordinaria (10.8 m³/s), quindi la madre non è in condizioni bankfull e il trasporto solido al nodo non è giustificato. Serve solo a capire quanto il risultato dipende dalla larghezza; il risultato del metodo è quello del run con le larghezze bankfull (§9.2).
+
+| Bif | $\beta$ bankfull | $\beta$ maschera | soluzione bankfull | soluzione maschera | $\psi$ bankfull | $\psi$ maschera | $\psi_{hyd}$ |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 15 | 31.1 | 8.0 | asimmetrica | bilanciata | 0.41 | 0.64 | 0.49 |
+| 106 | 23.0 | 12.3 | asimmetrica | asimmetrica | 0.35 | 0.56 | 0.54 |
+| 205 | 13.9 | 7.1 | asimmetrica | bilanciata | 0.47 | 0.40 | 0.74 |
+| 244 | 31.2 | 11.3 | asimmetrica | asimmetrica | 0.80 | 0.72 | 0.76 |
+| 366 | 30.4 | 10.8 | asimmetrica | bilanciata | 0.25 | 0.43 | 0.15 |
+| 469 | 15.4 | 6.5 | asimmetrica | bilanciata | 0.72 | 0.68 | 0.67 |
+| 584 | 33.6 | 24.0 | asimmetrica | asimmetrica | 0.51 | 0.75 | 0.66 |
+| 645 | 28.3 | 8.0 | asimmetrica | bilanciata | 0.46 | 0.45 | 0.35 |
+| 817 | 35.1 | 12.1 | asimmetrica | bilanciata | 0.17 | 0.26 | 0.08 |
+| 1070 | 14.4 | 9.0 | asimmetrica | bilanciata | 0.76 | 0.81 | 0.84 |
+| 1293 | 18.6 | 11.1 | asimmetrica | bilanciata | 0.69 | 0.76 | 0.67 |
+| 1369 | 12.0 | 4.6 | asimmetrica | bilanciata | 0.26 | 0.30 | 0.27 |
+
+| Indicatore | larghezze bankfull (riferimento) | larghezze della maschera (sensitività) |
+| --- | --- | --- |
+| $\beta$ | 12–35 | 4.6–24 |
+| nodi asimmetrici | 12 su 12 | 3 su 12 (106, 244, 584) |
+| scostamento massimo dalla soluzione bilanciata, $\lvert\psi-W_1/W_0\rvert$ | 0.39 | 0.10 |
+| dislivello massimo tra i rami, $\lvert\eta_i-\eta_0\rvert$ | 1.40 m | 0.21 m |
+| fondo rispetto al modulo idraulico (media / massimo) | −0.006 / 0.30 m | 0.023 / 0.58 m |
+
+**Conclusioni.**
+
+1. **Il nodo è molto sensibile alla larghezza.** Il rapporto di forma critico ($\approx12$–13) cade tra i valori di $\beta$ dei due run: con le larghezze bankfull tutti i nodi sono sopra la soglia e asimmetrici, con larghezze più piccole (quelle della maschera, 1.5–4 volte minori) 9 nodi su 12 scenderebbero sotto la soglia e diventerebbero bilanciati. Il tipo di soluzione dipende quindi in modo critico da come si misura la larghezza bankfull.
+2. **L'effetto sulla ripartizione è rilevante.** La quota di portata del ramo 1 differisce tra i due run in media di 0.11 e fino a 0.24 (584), 0.23 (15) e 0.21 (106); l'effetto sul fondo al volo è piccolo in media (≤ 0.02 m) ma arriva a 0.3–0.6 m localmente.
+3. **Conseguenza per il metodo.** Il risultato da usare è quello con le larghezze bankfull, l'unico coerente con l'ipotesi che la morfologia dei nodi si formi in condizioni bankfull. La sensibilità mostra però che la stima della larghezza bankfull va curata: al livello di sfioro la larghezza dal DTM comprende anche barre e canali adiacenti, tipici dei tratti a canali multipli, e può sovrastimare la larghezza del canale che alimenta il nodo. Una via per renderla più robusta è cercare le sponde solo nel canale attivo che alimenta il nodo, senza estendere la ricerca fino a $3W^m$. Nel paper il test va riportato come analisi di sensitività sulla larghezza bankfull.
+
+### 9.4 Questioni ancora aperte
+
+- **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione (§9.3).
+- **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico; $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) va eventualmente calibrato sull'Orco.
+- **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s).
+- **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$.
+- **Validazione** del DTM corretto con il run di riferimento (larghezze bankfull) contro GNSS e ADCP, rispetto al DTM grezzo e al modulo idraulico.
+
+---
+
 ## Registro modifiche
 
 | Data | Modifica |
@@ -529,3 +606,4 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 | 09/10/2026 | Conversione da `.docx` a Markdown; equazioni ricostruite in LaTeX. |
 | 09/10/2026 | Spostato nel repo GitHub (`docs/`): da qui in poi la versione di riferimento è questa. |
 | 09/10/2026 | Aggiunta la sezione 7 "Questioni aperte" e la sezione 8 "Domande per Carlo". |
+| 18/11/2026 | Aggiunta la sezione 9 "Aggiornamento del modulo morfodinamico": modifiche introdotte nel codice il 12/10/2026 e il 18/11/2026, risultati del run del 18/11/2026 e test di sensitività alla larghezza. |

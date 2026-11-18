@@ -177,9 +177,24 @@
 %  - Discussion: equilibrium hypothesis, low banks (critical-depth bound),
 %    choice among multiple equilibria.
 % Results of the verification run (fill in after the run):
-%  - date / LiDAR flight:
-%  - nodes balanced / asymmetric / fallback:
-%  - GNSS validation (RMSE, bias) hydraulic vs morphodynamic:
+%  - date / LiDAR flight: run of 18/11/2026, LiDAR flight of 17/03/2025
+%    (Q = 10.8 m^3/s at San Benigno).
+%  - reference run (node_width_source = 'dtm', bankfull widths at the node):
+%    12 nodes solved by the node system, 0 balanced / 12 asymmetric /
+%    0 fallback; beta = 12-35; S_b/S0 = 0.61-0.99; in all 12 nodes the
+%    branch with the lower bed has the coarser surface; bankfull bed
+%    difference between branches up to 1.4 m; D0 = critical depth (low
+%    banks) at 9 of 12 mothers; bed vs hydraulic module: mean -0.006 m,
+%    max 0.30 m; water and sediment conserved at all nodes.
+%  - sensitivity test only (node_width_source = 'mask': flight widths with
+%    bankfull depths, NOT a bankfull configuration): beta = 4.6-24,
+%    9 balanced / 3 asymmetric; share of branch 1 changes by 0.11 on average
+%    (max 0.24): the node is very sensitive to the bankfull width, because
+%    the critical beta (~12-13) lies between the two ranges. Result of the
+%    method = reference run; the bankfull width estimate must be robust.
+%  - GNSS validation (RMSE, bias) of the reference run vs raw DTM and
+%    hydraulic module: to be done.
+%  - Reported in docs/TeoriaMetodologica_moduli_idraulico_morfodinamico.md, section 9.
 
 
 %% 1. Workspace and inputs from the hydraulic module
