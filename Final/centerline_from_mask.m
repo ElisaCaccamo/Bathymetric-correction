@@ -36,8 +36,8 @@ Io = I;
 I = imfill(I,'holes');
 
 if ~islogical(I)
-    % warning('La maschera di input non è binaria. Verrà convertita automaticamente.');
-    I = I > 0; % Converte in binario
+    % warning('The input mask is not binary. It will be converted automatically.');
+    I = I > 0; % convert to binary
 end
 
 sizeIo = size(I);
@@ -61,22 +61,22 @@ for i = 1:2
             idx_I = find(Icombined(nr, :) == 1, 1, 'first');
             
 %             disp('Debugging Imirror:');
-%             disp(Imirror(end, :)); % Mostra l'ultima riga di Imirror
+%             disp(Imirror(end, :)); % Show the last row of Imirror
             idx_Im = find(Imirror(end, :) == 1, 1, 'first');
             if isempty(idx_Im)
-                error('Indice idx_Im non trovato. Verifica i dati di input.');
+                error('Index idx_Im not found. Check the input data.');
             end
 
             idx_Im = find(Imirror(end, :) == 1, 1, 'first');
             if isempty(idx_Im)
-                error('Nessun pixel attivo trovato nell''ultima riga di Imirror.');
+                error('No active pixel found in the last row of Imirror.');
             end
             % % Debugging output for indices
             % disp(['idx_I (N): ', num2str(idx_I)]);
             % disp(['idx_Im (N): ', num2str(idx_Im)]);
 
             if isempty(idx_I) || isempty(idx_Im)
-                error('Indice non trovato. Controlla che I e Imirror contengano dati validi.');
+                error('Index not found. Check that I and Imirror contain valid data.');
             end
 
             idx_start = max(1, idx_I - idx_Im);
@@ -86,7 +86,7 @@ for i = 1:2
             % disp(['idx_start (N): ', num2str(idx_start), ', idx_end (N): ', num2str(idx_end)]);
 
             if idx_end > size(Icombined, 2)
-                error('Indici fuori dai limiti per il caso N: idx_start=%d, idx_end=%d, size(Icombined,2)=%d', ...
+                error('Indices out of bounds for case N: idx_start=%d, idx_end=%d, size(Icombined,2)=%d', ...
                       idx_start, idx_end, size(Icombined, 2));
             end
 
@@ -100,7 +100,7 @@ for i = 1:2
             % disp(['idx_Im (E): ', num2str(idx_Im)]);
 
             if isempty(idx_I) || isempty(idx_Im)
-                error('Indice non trovato. Controlla che I e Imirror contengano dati validi.');
+                error('Index not found. Check that I and Imirror contain valid data.');
             end
 
             idx_start = max(1, idx_I - idx_Im);
@@ -110,7 +110,7 @@ for i = 1:2
             % disp(['idx_start (E): ', num2str(idx_start), ', idx_end (E): ', num2str(idx_end)]);
 
             if idx_end > size(Icombined, 1)
-                error('Indici fuori dai limiti per il caso E: idx_start=%d, idx_end=%d, size(Icombined,1)=%d', ...
+                error('Indices out of bounds for case E: idx_start=%d, idx_end=%d, size(Icombined,1)=%d', ...
                       idx_start, idx_end, size(Icombined, 1));
             end
 
@@ -124,7 +124,7 @@ for i = 1:2
             % disp(['idx_Im (S): ', num2str(idx_Im)]);
 
             if isempty(idx_I) || isempty(idx_Im)
-                error('Indice non trovato. Controlla che I e Imirror contengano dati validi.');
+                error('Index not found. Check that I and Imirror contain valid data.');
             end
 
             idx_start = max(1, idx_I - idx_Im);
@@ -134,7 +134,7 @@ for i = 1:2
             % disp(['idx_start (S): ', num2str(idx_start), ', idx_end (S): ', num2str(idx_end)]);
 
             if idx_end > size(Icombined, 2)
-                error('Indici fuori dai limiti per il caso S: idx_start=%d, idx_end=%d, size(Icombined,2)=%d', ...
+                error('Indices out of bounds for case S: idx_start=%d, idx_end=%d, size(Icombined,2)=%d', ...
                       idx_start, idx_end, size(Icombined, 2));
             end
 
@@ -148,7 +148,7 @@ for i = 1:2
             % disp(['idx_Im (W): ', num2str(idx_Im)]);
 
             if isempty(idx_I) || isempty(idx_Im)
-                error('Indice non trovato. Controlla che I e Imirror contengano dati validi.');
+                error('Index not found. Check that I and Imirror contain valid data.');
             end
 
             idx_start = max(1, idx_I - idx_Im);
@@ -158,7 +158,7 @@ for i = 1:2
             % disp(['idx_start (W): ', num2str(idx_start), ', idx_end (W): ', num2str(idx_end)]);
 
             if idx_end > size(Icombined, 1)
-                error('Indici fuori dai limiti per il caso W: idx_start=%d, idx_end=%d, size(Icombined,1)=%d', ...
+                error('Indices out of bounds for case W: idx_start=%d, idx_end=%d, size(Icombined,1)=%d', ...
                       idx_start, idx_end, size(Icombined, 1));
             end
 
@@ -220,27 +220,27 @@ Iskel = Iskel(padwidth:nr+padwidth-1,padwidth:nc+padwidth-1);
 Iskel_clean = bwareaopen(Iskel, W_px*5);
 
 if nnz(Iskel_clean) == 0
-    % Fallback: la soglia assoluta (5*W) ha rimosso l'intero scheletro.
-    % Probabile causa: tronco più corto di 5*W (es. tributario breve) e
-    % non necessariamente una maschera invalida. Invece di scartare tutto,
-    % si prova una soglia adattiva basata sulla dimensione della
-    % componente più grande effettivamente presente.
+    % Fallback: the absolute threshold (5*W) removed the whole skeleton.
+    % Likely cause: a segment shorter than 5*W (e.g. a short tributary), not
+    % necessarily an invalid mask. Instead of discarding everything, an
+    % adaptive threshold based on the size of the largest component actually
+    % present is tried.
     cc = bwconncomp(Iskel);
     if cc.NumObjects == 0
-        warning('centerline_from_mask: scheletro completamente vuoto anche prima della pulizia (W*5=%d px). Maschera probabilmente non valida.', W_px*5);
+        warning('centerline_from_mask: skeleton completely empty even before the cleaning (W*5=%d px). The mask is probably invalid.', W_px*5);
         cl = [];
         Icl = false(sizeIo);
         return
     end
     comp_sizes = cellfun(@numel, cc.PixelIdxList);
     max_size = max(comp_sizes);
-    fallback_thresh = max(1, round(max_size * 0.9));  % tiene la componente principale
-    warning(['centerline_from_mask: soglia W*5=%d px ha rimosso l''intero scheletro. ' ...
-             'Uso soglia adattiva=%d px (componente massima=%d px). Verificare se il tronco è più corto del previsto.'], ...
+    fallback_thresh = max(1, round(max_size * 0.9));  % keeps the main component
+    warning(['centerline_from_mask: threshold W*5=%d px removed the whole skeleton. ' ...
+             'Using adaptive threshold=%d px (largest component=%d px). Check whether the segment is shorter than expected.'], ...
              W_px*5, fallback_thresh, max_size);
     Iskel_clean = bwareaopen(Iskel, fallback_thresh);
     if nnz(Iskel_clean) == 0
-        warning('centerline_from_mask: scheletro ancora vuoto dopo soglia adattiva. Maschera non valida.');
+        warning('centerline_from_mask: skeleton still empty after the adaptive threshold. Invalid mask.');
         cl = [];
         Icl = false(sizeIo);
         return
@@ -256,9 +256,9 @@ Icl(yTop:yTop+nr-1,xLeft:xLeft+nc-1) = Iskel;
 % Find endpoints of binary centerline
 [yend, xend] = find(bwmorph(Icl,'endpoints'));    
 
-% % Verifica se ci sono meno di due endpoint
+% % Check whether there are fewer than two endpoints
 % if length(xend) < 2 || length(yend) < 2
-%     error('Errore: meno di due endpoint trovati nella centerline. Verifica la maschera di input e lo scheletro.');
+%     error('Error: fewer than two endpoints found in the centerline. Check the input mask and the skeleton.');
 % end
 
 % Find endpoints of binary centerline
@@ -268,7 +268,7 @@ cl = skeleton_coords(Icl, xend(2), yend(2), es);
 
 % Check endpoint count
 if length(xend) < 2 || length(yend) < 2
-    warning('centerline_from_mask: meno di due endpoint trovati. La centerline sarà vuota.');
+    warning('centerline_from_mask: fewer than two endpoints found. The centerline will be empty.');
     cl = [];
     return
 end

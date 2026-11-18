@@ -104,5 +104,5 @@ function [widths, sect_x, sect_y, sect_z, z_sect_mean] = calculate_widths(x_inte
         % Assign mean elevation to the edges
         sect_z(i, 1:length(t_local)) = z_sect_mean(i);
     end
-    z_sect_mean = z_sect_mean(:); % vettore colonna
+    z_sect_mean = z_sect_mean(:); % column vector
 end

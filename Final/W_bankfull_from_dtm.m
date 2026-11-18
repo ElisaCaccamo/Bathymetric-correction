@@ -162,10 +162,10 @@ end
 tvec = [dx_t, dy_t];
 if norm(tvec) == 0
     warning('Section %d: undefined centerline direction (coincident points).', i);
-    return; % direzione non definita
+    return; % direction not defined
 end
-tvec = tvec / norm(tvec);     % tangente normalizzata
-nvec = [-tvec(2), tvec(1)];   % normale (perpendicolare)
+tvec = tvec / norm(tvec);     % unit tangent
+nvec = [-tvec(2), tvec(1)];   % normal (perpendicular)
 
 % --- transect sampling ---
 xsec = xc + nvec(1) * s;
