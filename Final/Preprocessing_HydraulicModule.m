@@ -1,6 +1,8 @@
 %% PREPROCESSING & HYDRAULIC MODULE (ORCO)
-% Copy of 0_2025_ORCO_modifiche.mlx that reads every input from Input_folder
-% and writes every output to Output_folder:
+% Builds the river network from the masks and DTMs of the river segments
+% (centerlines, cross-sections, widths, slopes, topology) and computes the
+% bed elevation of every cross-section with uniform flow. Reads every input
+% from Input_folder and writes every output to Output_folder:
 %   Output_folder/01_Preprocessing     centerlines, widths, topology, figures
 %   Output_folder/02_HydraulicModule   riverbed elevation, depth, corrected DTM, DoD
 %   Output_folder/04_Validation        GNSS validation of the hydraulic DTM
@@ -912,7 +914,7 @@ for i = 1:size(z_matrix, 1)
 end
 % Save river bottom elevation for each cross-section
 save(fullfile(out_hydro, sprintf('HM_z_rect_all_%s.mat', run_tag)), 'z_rect_all');
-% Variables needed by the morphodynamic module (2_ORCO_bifurcationsNEW_modifiche)
+% Variables needed by the morphodynamic module (MorphodynamicModule.m)
 save(fullfile(out_hydro, sprintf('HM_workspace_%s.mat', run_tag)), ...
     'all_centerlines', 'sections_ids', 'bif_info', 'conf_info', ...
     'widths_all', 'slope_sect', 'z_rect_all', 'h_rect_all', 'Q_map', ...
@@ -1096,7 +1098,7 @@ for t = unique(all_centerlines(:,6))'
     end
 end
 
-%% Diagnostics (from 0_2025_ORCO_modifiche, specific to the 2025 network)
+%% Diagnostics (specific to the 2025 network)
 if run_diagnostics
     % Anomalia tronco 12
     idx = find(all_centerlines(:,6) == 12);
