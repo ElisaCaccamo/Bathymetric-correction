@@ -39,8 +39,22 @@ function [Tgroup, Tst] = compare_modules_gnss(T_hm, T_mm, S, all_centerlines, ou
 %                               the raw DTM (> 0: the correction improves the DTM)
 %   dRMSE_MM_HM                 RMSE_MM - RMSE_HM (< 0: MM closer to GNSS)
 %   n_MM_better, n_HM_better    stations where the RMSE of MM is lower / higher
-%                               than that of HM, with the two-sided sign test
-%                               p-value (is the split far from 50/50?)
+%                               than that of HM by more than opts.tie_tol, with
+%                               the two-sided sign test p-value (is the split far
+%                               from 50/50?)
+%   n_ties                      stations where the two RMSEs differ by at most
+%                               opts.tie_tol: they are excluded from the sign test.
+%                               Where the two modules carry the same discharge
+%                               (e.g. single channel) the RMSEs are equal up to
+%                               rounding (~1e-11 m): without a tolerance these
+%                               stations would be assigned to HM or MM by noise.
+%
+% PER-STATION TABLE (GNSS_module_comparison_stations.csv)
+%   dRMSE_MM_HM_cm  RMSE_MM - RMSE_HM at the station [cm] (< 0: MM closer to GNSS)
+%   dME_MM_HM_cm    ME_MM - ME_HM at the station [cm] = mean difference between
+%                   the two corrected beds (< 0: MM bed lower). It says where the
+%                   two modules differ, NOT which one is closer to GNSS.
+%   closer          'MM', 'HM' or 'tie' (|dRMSE| <= opts.tie_tol)
 %
 % FIGURES (out_dir)
 %   GNSS_module_comparison.png
@@ -55,10 +69,13 @@ function [Tgroup, Tst] = compare_modules_gnss(T_hm, T_mm, S, all_centerlines, ou
 % opts (optional struct)
 %   exclude  cell of stations reported also separately (default {'s006'})
 %   B        bootstrap replicates (default 2000)
+%   tie_tol  tolerance on the per-station RMSE difference [m] below which the
+%            two modules are considered equal (default 0.001 = 1 mm)
 
 if nargin < 6, opts = struct(); end
 if ~isfield(opts, 'exclude'), opts.exclude = {'s006'}; end
 if ~isfield(opts, 'B'), opts.B = 2000; end
+if ~isfield(opts, 'tie_tol'), opts.tie_tol = 0.001; end
 if ~isfolder(out_dir), mkdir(out_dir); end
 rng(1);
 
@@ -107,13 +124,15 @@ for k = 1:ns
 end
 rmse_st = sqrt(SS ./ n);
 me_st   = SM ./ n;
-dz_cm   = 100 * (me_st(:,3) - me_st(:,2));   % mean MM - HM bed difference at the station [cm]
-closer  = repmat({'HM'}, ns, 1);
-closer(rmse_st(:,3) < rmse_st(:,2)) = {'MM'};
+dz_cm   = 100 * (me_st(:,3) - me_st(:,2));       % mean MM - HM bed difference at the station [cm]
+drmse   = rmse_st(:,3) - rmse_st(:,2);           % RMSE MM - HM at the station [m]
+closer  = repmat({'tie'}, ns, 1);                % |dRMSE| <= tie_tol: the two modules are equal
+closer(drmse < -opts.tie_tol) = {'MM'};
+closer(drmse >  opts.tie_tol) = {'HM'};
 Tst = table(stations, cls, S.segment_code, n, me_st(:,1), me_st(:,2), me_st(:,3), ...
-    rmse_st(:,1), rmse_st(:,2), rmse_st(:,3), dz_cm, closer, ...
+    rmse_st(:,1), rmse_st(:,2), rmse_st(:,3), 100 * drmse, dz_cm, closer, ...
     'VariableNames', {'Station','reach_class','segment_code','n_points','ME_raw','ME_HM','ME_MM', ...
-    'RMSE_raw','RMSE_HM','RMSE_MM','MM_minus_HM_cm','closer'});
+    'RMSE_raw','RMSE_HM','RMSE_MM','dRMSE_MM_HM_cm','dME_MM_HM_cm','closer'});
 
 %% 3) Groups
 class_order = {'single channel','below bifurcation','below confluence','other multi-thread','no flow'};
@@ -143,7 +162,8 @@ vn = {'N_stations','N_points','RMSE_raw','RMSE_HM','RMSE_MM','ME_raw','ME_HM','M
       'Median_raw','Median_HM','Median_MM','NMAD_raw','NMAD_HM','NMAD_MM', ...
       'Median_raw_lo','Median_raw_hi','Median_HM_lo','Median_HM_hi','Median_MM_lo','Median_MM_hi', ...
       'NMAD_raw_lo','NMAD_raw_hi','NMAD_HM_lo','NMAD_HM_hi','NMAD_MM_lo','NMAD_MM_hi', ...
-      'dRMSE_raw_HM','dRMSE_raw_HM_lo','dRMSE_raw_HM_hi','dRMSE_raw_MM','dRMSE_raw_MM_lo','dRMSE_raw_MM_hi'};
+      'dRMSE_raw_HM','dRMSE_raw_HM_lo','dRMSE_raw_HM_hi','dRMSE_raw_MM','dRMSE_raw_MM_lo','dRMSE_raw_MM_hi', ...
+      'n_ties'};
 R = nan(ng, numel(vn));
 q = @(v) [prctile_simple(v, 2.5), prctile_simple(v, 97.5)];   % 95% percentile interval
 for g = 1:ng
@@ -166,9 +186,11 @@ for g = 1:ng
         db(b,:) = median(Eb, 1);
         nb(b,:) = nmad(Eb);
     end
-    % paired stations: who is closer to GNSS at each station
-    k_mm = nnz(rmse_st(idx,3) < rmse_st(idx,2));
-    k_hm = nnz(rmse_st(idx,3) > rmse_st(idx,2));
+    % paired stations: who is closer to GNSS at each station; differences
+    % within tie_tol are ties and are excluded from the sign test
+    k_mm = nnz(drmse(idx) < -opts.tie_tol);
+    k_hm = nnz(drmse(idx) >  opts.tie_tol);
+    k_tie = m - k_mm - k_hm;
     R(g,:) = [m, sum(n(idx)), rm, me, q(rb(:,1)), q(rb(:,2)), q(rb(:,3)), ...
               q(mb(:,1)), q(mb(:,2)), q(mb(:,3)), ...
               rm(3) - rm(2), q(rb(:,3) - rb(:,2)), ...          % MM - HM
@@ -176,7 +198,8 @@ for g = 1:ng
               mean(dz_cm(idx)), min(dz_cm(idx)), max(dz_cm(idx)), nnz(abs(dz_cm(idx)) > 2), ...
               md, nm, q(db(:,1)), q(db(:,2)), q(db(:,3)), q(nb(:,1)), q(nb(:,2)), q(nb(:,3)), ...
               rm(1) - rm(2), q(rb(:,1) - rb(:,2)), ...          % RMSE reduction of HM vs raw DTM
-              rm(1) - rm(3), q(rb(:,1) - rb(:,3))];             % RMSE reduction of MM vs raw DTM
+              rm(1) - rm(3), q(rb(:,1) - rb(:,3)), ...          % RMSE reduction of MM vs raw DTM
+              k_tie];
 end
 Tgroup = array2table(R, 'VariableNames', vn);
 Tgroup.group = gname(:);
@@ -184,14 +207,15 @@ Tgroup.group = gname(:);
 fprintf('\nGNSS comparison raw / hydraulic (HM) / morphodynamic (MM), points inside the corrected area\n');
 fprintf('95%% intervals from %d bootstrap replicates of the STATIONS (cross-sections)\n', opts.B);
 fprintf('%-38s %3s %4s | %-24s | %-22s | %-22s | %-22s | %s\n', 'group', 'st', 'pts', ...
-    'RMSE raw', 'RMSE HM', 'RMSE MM', 'RMSE MM - HM', 'MM better / sign test');
+    'RMSE raw', 'RMSE HM', 'RMSE MM', 'RMSE MM - HM', 'closer: MM / HM / ties, sign test');
 for g = 1:ng
     r = R(g,:);
-    fprintf('%-38s %3d %4d | %.2f [%.2f-%.2f] ME %+.2f | %.2f [%.2f-%.2f] %+.2f | %.2f [%.2f-%.2f] %+.2f | %+.3f [%+.3f, %+.3f] | %d/%d  p=%.2g\n', ...
+    fprintf('%-38s %3d %4d | %.2f [%.2f-%.2f] ME %+.2f | %.2f [%.2f-%.2f] %+.2f | %.2f [%.2f-%.2f] %+.2f | %+.3f [%+.3f, %+.3f] | %d / %d / %d  p=%.2g\n', ...
         gname{g}, r(1), r(2), r(3), r(9), r(10), r(6), r(4), r(11), r(12), r(7), ...
-        r(5), r(13), r(14), r(8), r(21), r(22), r(23), r(24), r(1), r(26));
+        r(5), r(13), r(14), r(8), r(21), r(22), r(23), r(24), r(25), r(end), r(26));
 end
-fprintf('ME after each RMSE interval. MM - HM < 0: the morphodynamic module is closer to GNSS.\n');
+fprintf(['ME after each RMSE interval. MM - HM < 0: the morphodynamic module is closer to GNSS.\n' ...
+    'Ties: stations where the two RMSEs differ by at most %.1f mm, excluded from the sign test.\n'], 1000 * opts.tie_tol);
 
 c = @(name) find(strcmp(vn, name));   % column of a statistic in R
 fprintf('\nRobust statistics (median error, NMAD) and RMSE reduction with respect to the raw DTM\n');
@@ -240,16 +264,19 @@ legend(axA, [h0 h1 h2 hb], [{'raw LiDAR DTM', 'hydraulic module', 'morphodynamic
 axB = axes('Position', [0.07 0.37 0.91 0.14]);  hold(axB, 'on');
 ylb = [min([dz_cm; -1]) - 1, max([dz_cm; 1]) + 1];
 draw_bands(axB, cls, ylb, band, class_order);
-is_mm = strcmp(closer, 'MM');
 for k = 1:ns
-    if is_mm(k), fc = col_mm; else, fc = col_hm; end
+    switch closer{k}
+        case 'MM', fc = col_mm;
+        case 'HM', fc = col_hm;
+        otherwise, fc = col_raw;   % tie
+    end
     rect(axB, x(k), dz_cm(k), 0.7, fc, 'none', 0.5);
 end
 plot(axB, [0.4 ns + 0.6], [0 0], '-', 'Color', ink, 'LineWidth', 0.8);
 set(axB, 'XLim', [0.4 ns + 0.6], 'YLim', ylb, 'XTick', x, 'XTickLabel', lab, 'FontSize', 8, 'Box', 'off', 'Layer', 'top');
 grid(axB, 'on');  set(axB, 'XGrid', 'off');
-ylabel(axB, {'MM - HM [cm]'});
-title(axB, 'B. Difference between the two corrected DTMs (bar colour = module closer to GNSS: blue hydraulic, orange morphodynamic)', ...
+ylabel(axB, {'mean bed MM - HM [cm]'});
+title(axB, 'B. Mean difference between the two corrected beds (bar colour = module with the lower RMSE: blue hydraulic, orange morphodynamic, grey tie)', ...
     'FontWeight', 'normal');
 
 % --- C ---
@@ -328,7 +355,7 @@ plot(ax2, [0 max(S.s_from_node) * 1.05 + 1], [0 0], '-', 'Color', ink);
 text(ax2, S.s_from_node, dz_cm, strcat({' '}, lab), 'FontSize', 7, 'Color', ink);
 grid(ax2, 'on');
 xlabel(ax2, 'Distance from the upstream node of the segment [m]');
-ylabel(ax2, 'MM - HM at the station [cm]');
+ylabel(ax2, 'mean bed MM - HM at the station [cm]');
 title(ax2, 'Effect of the morphodynamic module vs distance from the node', 'FontWeight', 'normal');
 
 exportgraphics(fig2, fullfile(out_dir, 'GNSS_station_assignment.png'), 'Resolution', 200);

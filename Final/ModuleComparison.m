@@ -62,7 +62,8 @@ writetable(S, fullfile(out_cmp, 'GNSS_stations_reach_class.csv'));
 
 %% 3. Statistics and comparison figure
 [Tgroup, Tst] = compare_modules_gnss(T_hm, T_mm, S, all_centerlines, out_cmp, ...
-    struct('exclude', {stations_exclude}, 'B', 2000));
+    struct('exclude', {stations_exclude}, 'B', 2000, ...
+           'tie_tol', 0.001));   % |RMSE_MM - RMSE_HM| <= 1 mm at a station = tie, excluded from the sign test
 
 %% 4. Map of the difference between the two corrected DTMs
 [dtm_hm, R] = readgeoraster(fullfile(out_hydro,  sprintf('HM_DTM_corrected_%s.tif', run_tag)));

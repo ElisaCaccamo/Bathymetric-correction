@@ -17,7 +17,9 @@ Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i pun
 - **Validazione GNSS (48 stazioni):** RMSE da 0.60 (DTM grezzo) a 0.36 m in entrambi i moduli; errore medio da +0.56 a +0.12 m. Senza s006: 0.30 m.
 - **I due moduli non sono distinguibili:** differenza di RMSE +0.4 cm [−0.1, +0.9]; MM più vicino in 3 stazioni, HM in 8, 37 pari (p ≈ 0.23). Differiscono solo nelle 11 stazioni dei tratti a canali multipli.
 - **$z_{DTM}$ resta l'errore dominante:** confermata alla sezione 170 la causa 1 della §9.6 (nodata −32767 dei DTM di segmento non convertito), con il filtro sui salti che sposta l'errore sulle sezioni sane. Correzione in attesa di decisione.
-- **Da decidere ora:** correzione di $z_{DTM}$ (§9.6), gestione delle parità nel test del segno, classi delle stazioni (troppo poche fuori dal canale singolo).
+- **Corretto `compare_modules_gnss.m`:** il test del segno esclude le parità (|ΔRMSE| ≤ 1 mm, parametro `tie_tol`); la tabella delle stazioni riporta sia la differenza di RMSE sia quella dell'errore medio. Il resoconto del run contava come "MM più vicino" le stazioni con fondo MM più basso: i numeri corretti sono 3 contro 8 (punto 14 della §9.4). Va rilanciato `ModuleComparison`.
+- **Domande per Carlo:** raccolte nella §8.2 (classi delle stazioni, larghezza bankfull, $\theta^*_{BF}$, portata bankfull, regola di scelta, trasporto al volo, rete alla portata bankfull, ADCP).
+- **Da decidere ora:** correzione di $z_{DTM}$ (§9.6); come presentare il contributo del modulo morfodinamico nel paper.
 
 ---
 
@@ -44,7 +46,13 @@ In entrambi i moduli il calcolo procede da monte verso valle e ogni sezione vien
 | $W^m$ | larghezza osservata dalla maschera il giorno del volo LiDAR | m |
 | $W^{bf}$ | larghezza bankfull teorica, larghezza rettangolare equivalente $A/D$ dal DTM corretto | m |
 | $D_{i,s}$ | tirante di Shields del ramo $i$, usato solo per misurare la geometria bankfull del ramo | m |
-| $\psi$ | quota di portata del ramo 1 in condizioni bankfull, $\psi=Q_1^{bf}/Q_0^{bf}$ | – |
+| $\psi$ | quota di portata del ramo 1 in condizioni bankfull, $\psi=Q_1^{bf}/Q_0^{bf}$; al volo la portata si ripartisce con la stessa $\psi$ | – |
+| $W_1/W_0$ | quota di larghezza del ramo 1: è la $\psi$ della soluzione bilanciata (portata ripartita in proporzione alle larghezze, $D_1=D_2=D_0$) | – |
+| $\psi_{hyd}$ | quota di portata del ramo 1 nel modulo idraulico al volo, $Q_1^{hyd}/Q_0$, usata come riferimento per scegliere tra le soluzioni asimmetriche (§9.1) | – |
+| $\psi_x$ | quota del flusso solido della classe $x$ (C o F) che va nel ramo 1, $Q_{s1,x}/Q_{s0,x}$ | – |
+| $\beta$ | rapporto di forma della madre in condizioni bankfull, $\beta=W_0^{bf}/(2D_0)$ (semilarghezza su tirante). Sotto un valore critico (≈ 12–13 con rami uguali) il nodo ha solo la soluzione bilanciata; sopra compaiono due soluzioni asimmetriche e la bilanciata diventa instabile (Bolla Pittaluga et al., 2003) | – |
+| $\theta^*_c$, $\theta^*_{BF}$ | numero di Shields critico (0.03) e bankfull ($1.62\,\theta^*_c$), riferiti a $d_{50}$ | – |
+| $\theta_{bf}/\theta^*_c$ | Shields bankfull effettivo della madre diviso per quello critico, con $\theta_{bf}=D_0 S_0/(\Delta d_{50})$. Dice quale limite fissa $D_0$ (§9.1): 1.62 = tirante di Shields pieno $D_S$; 1.00 = tirante critico $D_c$ (sponde basse); valori intermedi = livello di sfioro del transetto | – |
 
 ---
 
@@ -530,12 +538,54 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 
 ## 8. Domande per Carlo
 
+### 8.1 Ottobre 2026
+
 1. Al nodo, la pendenza di madre e rami si può calcolare su una finestra di lunghezza fissa $L$ invece che con la regressione sull'intero tratto (§7.2 A)? Se sì, con quale $L$?
 2. Quando la regressione dà una pendenza nulla o negativa, è meglio usare la pendenza del tratto adiacente (§7.2 B) o modificare il valore di ripiego $1.6\cdot10^{-4}$ (§7.2 C)? In questo secondo caso, con quale criterio va scelto il nuovo valore?
 3. Il tirante bankfull di Shields ($\theta^*_{BF}=1.62\,\theta^*_c$) supera l'altezza delle sponde in molti tratti a canali multipli. È meglio limitarlo con il livello di sfioro del transetto (§7.3 A) o calibrare $\theta^*_{BF}$ sull'Orco (§7.3 B)?
 4. Quando la larghezza bankfull non è calcolabile, si può usare quella della maschera e, se si trova una sola sponda, calcolare l'area sul semi-transetto e raddoppiarla (§7.4)?
 5. Se a bankfull un ramo si chiude ($q_2\le0$, nodo 106) ma è bagnato il giorno del volo, va considerato un risultato fisico o un segnale di dati in ingresso non affidabili?
 6. Per i nodi che restano non risolti, è accettabile la ripartizione proporzionale alle larghezze (§7.6), dichiarando nei risultati che lì le quote di fondo sono idrauliche e non morfodinamiche?
+
+### 8.2 19/11/2026
+
+Domande nate dai run del 18/11/2026 (§9.8). Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
+
+**1. Classi delle stazioni GNSS per la validazione.**
+*Contesto.* Una delle sotto-domande del paper è dove il modulo morfodinamico migliora quello idraulico: nel canale singolo, a valle delle biforcazioni o a valle delle confluenze. Per rispondere, ognuna delle 48 stazioni GNSS (sezioni trasversali misurate) viene assegnata a un tipo di tratto, ricavato dalla topologia della rete. Con la rete corretta (rami 15, 16, 29 senza portata) le stazioni sono: 37 nel canale singolo, 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 in altri tratti a canali multipli. Nel canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso errore per costruzione: il confronto tra i moduli si gioca solo sulle altre 11 stazioni, e con 5, 1 e 5 stazioni per classe gli intervalli di confidenza sono molto larghi (per esempio RMSE 0.09–0.60 m negli altri tratti a canali multipli).
+*Domanda.* Come conviene raggruppare le stazioni per il confronto tra i moduli?
+- (a) Due classi: canale singolo (37) contro canali multipli (11).
+- (b) Nessuna classe: differenza tra i moduli in funzione della distanza dal nodo a monte (11 stazioni).
+- (c) Quattro classi solo descrittive, senza intervalli né test.
+- (d) Nuove misure (GNSS o ADCP) nei tratti a canali multipli, per avere più stazioni dove i moduli differiscono.
+
+**2. Stima della larghezza bankfull e rapporto di forma $\beta$.**
+*Contesto.* Il tipo di soluzione al nodo dipende dal rapporto di forma bankfull della madre, $\beta=W_0^{bf}/(2D_0)$: sotto ≈ 12–13 esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche (BRT). Oggi $W^{bf}$ si misura sul DTM al livello di sfioro, cercando le sponde fino a $3W^m$ dalla centerline: nei tratti a canali multipli la larghezza comprende anche barre e canali adiacenti. Il test con le larghezze della maschera (§9.3) porta i nodi asimmetrici da 12 a 3; nel run del 18/11 sera il nodo 1369 passa da asimmetrico a bilanciato perché $\beta$ scende da 12.0 a 11.7.
+*Domanda.* È corretto cercare le sponde solo nel canale attivo che alimenta il nodo? C'è un criterio di letteratura per la larghezza bankfull dei singoli rami in un fiume a canali multipli? Nel paper basta un'analisi di sensitività su $\beta$, o serve una stima indipendente della larghezza?
+
+**3. Coefficiente $\theta^*_{BF}=1.62\,\theta^*_c$ e sponde basse.**
+*Contesto.* Il tirante bankfull della madre è il tirante di Shields $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$, limitato dal livello di sfioro e mai sotto il tirante critico $D_c$ (§9.1). Nel run del 18/11 sera il limite che decide è: tirante critico (sponde più basse di $D_c$) in 5 madri su 10, Shields pieno in 2, livello di sfioro in 3. La fonte del coefficiente 1.62 non è documentata.
+*Domanda.* Da quale riferimento viene 1.62? Vale per un fiume ghiaioso a canali multipli come l'Orco, o conviene calibrare $\theta^*_{BF}$ sulle sezioni a canale singolo con sponde ben definite? Limitare il tirante con il livello di sfioro è un criterio accettabile?
+
+**4. Portata bankfull non coerente lungo la rete.**
+*Contesto.* Ogni nodo calcola la sua portata bankfull localmente, da larghezza, tirante e pendenza della madre. I valori non sono coerenti lungo la rete: 15: 186, 106: 149, 205: 306, 244: 549, 469: 72, 584: 214, 645: 476, 1070: 23, 1293: 264, 1369: 1118 m³/s (a 1369 il tirante bankfull è 4.0 m).
+*Domanda.* Conviene imporre una sola portata formativa all'ingresso della rete e ripartirla con $\psi$ a ogni nodo, così che la portata bankfull sia coerente lungo la rete? Oppure si accettano valori locali, dichiarando che ogni nodo è trattato come isolato? Se si impone una portata unica, con quale criterio sceglierla alla stazione di San Benigno?
+
+**5. Regola di scelta tra le soluzioni asimmetriche.**
+*Contesto.* Quando il nodo ha soluzioni asimmetriche, si adotta quella con $\psi$ più vicina a $\psi_{hyd}$, la quota di portata del ramo 1 nel modulo idraulico al volo (§9.1). Nei nodi 205, 584 e 645 nessuna soluzione è vicina: $\psi$ = 0.47 contro $\psi_{hyd}$ = 0.74; 0.51 contro 0.66; 0.46 contro 0.35.
+*Domanda.* $\psi_{hyd}$, che descrive la ripartizione a portata ordinaria, è un riferimento adeguato per scegliere tra equilibri che si formano a bankfull? Alternative possibili: scegliere la soluzione in cui il ramo più basso nel DTM è quello che porta più portata, oppure quella coerente con il ramo più largo nella maschera.
+
+**6. Trasporto solido nullo alla portata del volo.**
+*Contesto.* Alla portata del volo (10.8 m³/s) i flussi solidi calcolati sono dell'ordine di 10⁻¹⁶–10⁻²¹ m³/s, molto sotto la soglia di moto. Al volo il modulo morfodinamico agisce quindi sul fondo solo tramite la ripartizione della portata $\psi$, ricavata dall'equilibrio bankfull; le ripartizioni dei flussi solidi $\psi_x$ agiscono su quantità nulle.
+*Domanda.* È coerente con l'impostazione del metodo (configurazione del nodo formata a bankfull, ritorno al volo solo per la ripartizione della portata)? Va presentato così nel paper?
+
+**7. Rami 16–15 e 29 alla portata bankfull.**
+*Contesto.* Al volo i rami 16–15 e 29 sono quasi fermi e il modello li tratta senza portata e senza ricostruzione del fondo (§9.7). Alla portata formativa sono attivi e collegati in modo diverso (il 29 alimentato dal tratto 22, il 16–15 come parte di un meandro), quindi la topologia della rete cambia con la portata.
+*Domanda.* Basta dichiararlo tra i limiti del paper, oppure serve costruire la rete alla portata bankfull (per esempio da una maschera dell'area attiva) da usare nel modulo morfodinamico?
+
+**8. Dati ADCP.**
+*Contesto.* Al volo i due moduli differiscono solo nella ripartizione della portata ai nodi, e i GNSS misurano il fondo, non la portata dei rami: con le stazioni disponibili i moduli non sono distinguibili (differenza di RMSE +0.4 cm [−0.1, +0.9]). Le misure di portata nei rami sono l'unico dato che può dire quale ripartizione è giusta.
+*Domanda.* Quali misure ADCP sono disponibili (date, sezioni, rami, portata del giorno)? Coprono i rami di qualche biforcazione?
 
 ---
 
@@ -657,7 +707,7 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 | 11 | **Errore sistematico positivo** del DTM corretto: sceso a +0.12 m (per punto) dopo i punti 6 e 7; +0.15–0.16 m senza s006, +0.30 m negli altri tratti a canali multipli (§9.8) | aperto | rivedere dopo il punto 8; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
 | 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`: RMSE, errore medio, mediana e NMAD con intervallo per stazione, riduzione dell'RMSE rispetto al DTM grezzo e differenza tra i moduli con intervallo appaiato | nel paper riportare questi intervalli al posto di quelli di `validation_gnss_mean.m` (vedi PaperBAT, 5.5) |
 | 13 | **Confronto dei due moduli da ripetere** (§9.5) | ripetuto dopo i punti 6 e 7 (§9.8): differenza non significativa | ripetere dopo il punto 8 |
-| 14 | **Test del segno e parità:** `compare_modules_gnss.m` (righe 111–112 e 170–171) conta come vittorie le stazioni con RMSE uguale nei due moduli a meno di 10⁻¹¹ (37 su 48), che finiscono a HM o a MM per rumore di arrotondamento; nel log risulta "MM migliore in 9/48, p = 4·10⁻⁵". La colonna `MM_minus_HM_cm` della tabella delle stazioni è la differenza dell'errore medio, non dell'RMSE | da correggere | escludere le parità con una tolleranza (1 mm: MM più vicino in 3, HM in 8, 37 pari, p ≈ 0.23); rinominare la colonna o aggiungere la differenza di RMSE |
+| 14 | **Test del segno e parità:** `compare_modules_gnss.m` (righe 111–112 e 170–171) conta come vittorie le stazioni con RMSE uguale nei due moduli a meno di 10⁻¹¹ (37 su 48), che finiscono a HM o a MM per rumore di arrotondamento; nel log risulta "MM migliore in 9/48, p = 4·10⁻⁵". La colonna `MM_minus_HM_cm` della tabella delle stazioni è la differenza dell'errore medio, non dell'RMSE | **corretto nel codice** (19/11/2026): `opts.tie_tol` = 1 mm (impostato in `ModuleComparison.m`); `closer` vale MM, HM o `tie`; colonne `dRMSE_MM_HM_cm` (differenza di RMSE) e `dME_MM_HM_cm` (differenza dell'errore medio, ex `MM_minus_HM_cm`); `n_ties` nella tabella dei gruppi; barre grigie per le parità nel pannello B. Con i CSV del 18/11 sera: MM più vicino in 3, HM in 8, 37 pari, p ≈ 0.23 | rilanciare `ModuleComparison` e verificare che il log riporti 3 / 8 / 37 |
 | 15 | **Trasporto solido al volo praticamente nullo:** i flussi solidi di MM alla portata del volo sono 10⁻¹⁶–10⁻²¹ m³/s, quindi le ripartizioni $\psi_x$ al volo agiscono su quantità nulle | da verificare | confermare che è atteso (10.8 m³/s è molto sotto la soglia di moto) e dichiararlo: al volo il modulo morfodinamico agisce solo tramite $\psi$ |
 
 ### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
@@ -763,7 +813,9 @@ Run con la portata propagata solo dentro il tratto (punto 6 della §9.4) e i tra
 
 **Bilancio di portata.** Nessun nodo sbilanciato in nessuno dei due moduli: lo sbilancio massimo è 4.6·10⁻¹² m³/s (HM, nodo 205), in MM è nullo; la portata è costante dentro ogni tratto. I tratti senza valle sono esattamente quelli attesi: 15 e 29 (Q = 0) e 42 (uscita, 10.80 m³/s in entrambi i moduli; prima HM 9.99 → 7.83, MM 6.75). Le portate dei rami differiscono tra i moduli soprattutto nei tratti 10 (HM 2.86, MM 5.75 m³/s), 9 (7.94 contro 5.05), 4/6 (5.81 contro 3.81) e 22 (7.08 contro 5.49).
 
-**Nodi.** 366 e 817 sono "branch without discharge" in entrambi i moduli. Gli altri 10 nodi sono risolti dal sistema (residuo ≤ 1.9·10⁻¹⁵):
+**Nodi.** 366 e 817 sono "branch without discharge" in entrambi i moduli. Gli altri 10 nodi sono risolti dal sistema (residuo ≤ 1.9·10⁻¹⁵).
+
+Come leggere la tabella (simboli nella §1): $\beta=W_0^{bf}/(2D_0)$ è il rapporto di forma bankfull della madre e decide quante soluzioni ha il nodo; $\psi$ è la quota di portata del ramo 1 nella soluzione adottata; $W_1/W_0$ è la $\psi$ della soluzione bilanciata, quindi $\psi\neq W_1/W_0$ indica una soluzione asimmetrica; $\psi_{hyd}$ è la quota del ramo 1 nel modulo idraulico, usata per scegliere tra le asimmetriche; $\theta_{bf}/\theta^*_c$ dice quale limite fissa il tirante bankfull della madre (1.62: Shields pieno; 1.00: tirante critico, sponde basse; intermedio: livello di sfioro).
 
 | Bif | $\beta$ | $\psi$ | $W_1/W_0$ | $\psi_{hyd}$ | soluzioni | tipo | $\theta/\theta_c$ madre | run prec. (§9.3): $\beta$ / $\psi$ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -798,7 +850,7 @@ Run con la portata propagata solo dentro il tratto (punto 6 della §9.4) e i tra
 
 La riduzione dell'RMSE rispetto al DTM grezzo (intervallo appaiato per stazione) è +0.24 m su tutte le stazioni (HM [+0.11, +0.34], MM [+0.10, +0.34]) e +0.31 / +0.30 m senza s006 (HM [+0.26, +0.35], MM [+0.26, +0.35]). Rispetto al run precedente (§9.5) l'errore medio per punto scende da +0.17 a +0.12 m (HM) e da +0.19 a +0.12 m (MM); l'RMSE per stazione da 0.38/0.39 a 0.36/0.36 m.
 
-**Confronto tra i moduli.** La differenza di RMSE MM − HM su tutte le stazioni è +0.4 cm [−0.1, +0.9]: l'intervallo comprende lo zero, e i due moduli non sono distinguibili (prima +1.3 cm [+0.7, +1.8]). Nelle 37 stazioni del canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso RMSE. Escludendo queste parità (|ΔRMSE| ≤ 1 mm), MM è più vicino ai GNSS in 3 stazioni (s003 −6.0, s047 −6.5, s015 −0.9 cm) e HM in 8 (s044 +9.4, s046 +8.4, s045 +5.1, s008 +4.6, s007 +4.5, s032 +1.1, s016 +0.9, s006 +0.3 cm): test del segno p ≈ 0.23. Il "9/48, p = 4·10⁻⁵" del log conta le parità numeriche (punto 14 della §9.4) e non va usato.
+**Confronto tra i moduli.** La differenza di RMSE MM − HM su tutte le stazioni è +0.4 cm [−0.1, +0.9]: l'intervallo comprende lo zero, e i due moduli non sono distinguibili (prima +1.3 cm [+0.7, +1.8]). Nelle 37 stazioni del canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso RMSE. Escludendo queste parità (|ΔRMSE| ≤ 1 mm), MM è più vicino ai GNSS in 3 stazioni (s003 −6.0, s047 −6.5, s015 −0.9 cm) e HM in 8 (s044 +9.4, s046 +8.4, s045 +5.1, s008 +4.6, s007 +4.5, s032 +1.1, s016 +0.9, s006 +0.3 cm): test del segno p ≈ 0.23. Il "9/48, p = 4·10⁻⁵" del log conta le parità numeriche (punto 14 della §9.4) e non va usato. Anche il resoconto del run sbagliava il conteggio ("MM più vicino in 7, HM in 4"): usava la colonna `MM_minus_HM_cm`, che è la differenza dell'errore medio (fondo MM più basso o più alto), non dell'RMSE. Dal 19/11 `compare_modules_gnss.m` esclude le parità (`tie_tol` = 1 mm) e riporta le due differenze in colonne separate.
 
 La mappa delle differenze MM − HM (1 740 047 pixel corretti) ha media −0.001 m e range [−0.24, +0.16] m; il 72.6% dei pixel ha |dZ| ≤ 5 mm e il P95 di |dZ| è 0.06 m. Le differenze si concentrano nei tratti a canali multipli (tratti 1–2, 4–13, 21–27; rami 31–32, 34/36, 38–39); la differenza media più grande è nel tratto 10 (−18.6 cm), dove la portata di MM è doppia di quella di HM.
 
@@ -836,3 +888,4 @@ La causa 1 della §9.6 è confermata; le cause 2 (riempimento: DTM di segmento u
 | 18/11/2026 | §9.7 e punto 7 della §9.4: aggiunte le osservazioni sul campo sui rami 16–15 e 29 (quasi fermi al volo, attivi a portate più alte). |
 | 18/11/2026 | §9.7: scelte adottate per i rami 15, 16 e 29 (portata nulla, fondo non ricostruito, nessun sistema del nodo), implementate in `Final`. §9.4: aggiornati i punti 7, 10 e 12. |
 | 19/11/2026 | Aggiunta in testa la sezione "Stato del lavoro" (resoconto per giornata). Aggiunta la §9.8: risultati dei run del 18/11 sera con la rete corretta (bilancio di portata, nodi, validazione GNSS, confronto dei moduli, verifica di $z_{DTM}$ alla sezione 170). §9.4: chiusi i punti 6 e 7, aggiornati 1, 2, 4, 8, 10, 11, 13; nuovi punti 14 (parità nel test del segno) e 15 (trasporto al volo nullo). Nota in testa alla §9.5 e verifica in §9.6. |
+| 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
