@@ -552,7 +552,9 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 Domande nate dai run del 18/11/2026 (§9.8). Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
 
 **1. Classi delle stazioni GNSS per la validazione.**
+
 *Contesto.* Una delle sotto-domande del paper è dove il modulo morfodinamico migliora quello idraulico: nel canale singolo, a valle delle biforcazioni o a valle delle confluenze. Per rispondere, ognuna delle 48 stazioni GNSS (sezioni trasversali misurate) viene assegnata a un tipo di tratto, ricavato dalla topologia della rete. Con la rete corretta (rami 15, 16, 29 senza portata) le stazioni sono: 37 nel canale singolo, 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 in altri tratti a canali multipli. Nel canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso errore per costruzione: il confronto tra i moduli si gioca solo sulle altre 11 stazioni, e con 5, 1 e 5 stazioni per classe gli intervalli di confidenza sono molto larghi (per esempio RMSE 0.09–0.60 m negli altri tratti a canali multipli).
+
 *Domanda.* Come conviene raggruppare le stazioni per il confronto tra i moduli?
 - (a) Due classi: canale singolo (37) contro canali multipli (11).
 - (b) Nessuna classe: differenza tra i moduli in funzione della distanza dal nodo a monte (11 stazioni).
@@ -560,31 +562,45 @@ Domande nate dai run del 18/11/2026 (§9.8). Per ognuna: il contesto, la domanda
 - (d) Nuove misure (GNSS o ADCP) nei tratti a canali multipli, per avere più stazioni dove i moduli differiscono.
 
 **2. Stima della larghezza bankfull e rapporto di forma $\beta$.**
+
 *Contesto.* Il tipo di soluzione al nodo dipende dal rapporto di forma bankfull della madre, $\beta=W_0^{bf}/(2D_0)$: sotto ≈ 12–13 esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche (BRT). Oggi $W^{bf}$ si misura sul DTM al livello di sfioro, cercando le sponde fino a $3W^m$ dalla centerline: nei tratti a canali multipli la larghezza comprende anche barre e canali adiacenti. Il test con le larghezze della maschera (§9.3) porta i nodi asimmetrici da 12 a 3; nel run del 18/11 sera il nodo 1369 passa da asimmetrico a bilanciato perché $\beta$ scende da 12.0 a 11.7.
+
 *Domanda.* È corretto cercare le sponde solo nel canale attivo che alimenta il nodo? C'è un criterio di letteratura per la larghezza bankfull dei singoli rami in un fiume a canali multipli? Nel paper basta un'analisi di sensitività su $\beta$, o serve una stima indipendente della larghezza?
 
 **3. Coefficiente $\theta^*_{BF}=1.62\,\theta^*_c$ e sponde basse.**
+
 *Contesto.* Il tirante bankfull della madre è il tirante di Shields $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$, limitato dal livello di sfioro e mai sotto il tirante critico $D_c$ (§9.1). Nel run del 18/11 sera il limite che decide è: tirante critico (sponde più basse di $D_c$) in 5 madri su 10, Shields pieno in 2, livello di sfioro in 3. La fonte del coefficiente 1.62 non è documentata.
+
 *Domanda.* Da quale riferimento viene 1.62? Vale per un fiume ghiaioso a canali multipli come l'Orco, o conviene calibrare $\theta^*_{BF}$ sulle sezioni a canale singolo con sponde ben definite? Limitare il tirante con il livello di sfioro è un criterio accettabile?
 
 **4. Portata bankfull non coerente lungo la rete.**
+
 *Contesto.* Ogni nodo calcola la sua portata bankfull localmente, da larghezza, tirante e pendenza della madre. I valori non sono coerenti lungo la rete: 15: 186, 106: 149, 205: 306, 244: 549, 469: 72, 584: 214, 645: 476, 1070: 23, 1293: 264, 1369: 1118 m³/s (a 1369 il tirante bankfull è 4.0 m).
+
 *Domanda.* Conviene imporre una sola portata formativa all'ingresso della rete e ripartirla con $\psi$ a ogni nodo, così che la portata bankfull sia coerente lungo la rete? Oppure si accettano valori locali, dichiarando che ogni nodo è trattato come isolato? Se si impone una portata unica, con quale criterio sceglierla alla stazione di San Benigno?
 
 **5. Regola di scelta tra le soluzioni asimmetriche.**
+
 *Contesto.* Quando il nodo ha soluzioni asimmetriche, si adotta quella con $\psi$ più vicina a $\psi_{hyd}$, la quota di portata del ramo 1 nel modulo idraulico al volo (§9.1). Nei nodi 205, 584 e 645 nessuna soluzione è vicina: $\psi$ = 0.47 contro $\psi_{hyd}$ = 0.74; 0.51 contro 0.66; 0.46 contro 0.35.
+
 *Domanda.* $\psi_{hyd}$, che descrive la ripartizione a portata ordinaria, è un riferimento adeguato per scegliere tra equilibri che si formano a bankfull? Alternative possibili: scegliere la soluzione in cui il ramo più basso nel DTM è quello che porta più portata, oppure quella coerente con il ramo più largo nella maschera.
 
 **6. Trasporto solido nullo alla portata del volo.**
+
 *Contesto.* Alla portata del volo (10.8 m³/s) i flussi solidi calcolati sono dell'ordine di 10⁻¹⁶–10⁻²¹ m³/s, molto sotto la soglia di moto. Al volo il modulo morfodinamico agisce quindi sul fondo solo tramite la ripartizione della portata $\psi$, ricavata dall'equilibrio bankfull; le ripartizioni dei flussi solidi $\psi_x$ agiscono su quantità nulle.
+
 *Domanda.* È coerente con l'impostazione del metodo (configurazione del nodo formata a bankfull, ritorno al volo solo per la ripartizione della portata)? Va presentato così nel paper?
 
 **7. Rami 16–15 e 29 alla portata bankfull.**
+
 *Contesto.* Al volo i rami 16–15 e 29 sono quasi fermi e il modello li tratta senza portata e senza ricostruzione del fondo (§9.7). Alla portata formativa sono attivi e collegati in modo diverso (il 29 alimentato dal tratto 22, il 16–15 come parte di un meandro), quindi la topologia della rete cambia con la portata.
+
 *Domanda.* Basta dichiararlo tra i limiti del paper, oppure serve costruire la rete alla portata bankfull (per esempio da una maschera dell'area attiva) da usare nel modulo morfodinamico?
 
 **8. Dati ADCP.**
+
 *Contesto.* Al volo i due moduli differiscono solo nella ripartizione della portata ai nodi, e i GNSS misurano il fondo, non la portata dei rami: con le stazioni disponibili i moduli non sono distinguibili (differenza di RMSE +0.4 cm [−0.1, +0.9]). Le misure di portata nei rami sono l'unico dato che può dire quale ripartizione è giusta.
+
 *Domanda.* Quali misure ADCP sono disponibili (date, sezioni, rami, portata del giorno)? Coprono i rami di qualche biforcazione?
 
 ---
