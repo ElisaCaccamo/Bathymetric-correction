@@ -6,6 +6,21 @@
 
 ---
 
+## Stato del lavoro
+
+Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i punti aperti sono nella tabella della §9.4.
+
+**19/11/2026.** Analizzati i run del 18/11 sera (pre-processing + modulo idraulico, modulo morfodinamico, `ModuleComparison`) con la rete corretta: portata propagata solo dentro il tratto e tratti 15, 16, 29 senza portata (§9.8).
+
+- **Portata conservata ovunque:** 10.80 m³/s all'uscita in entrambi i moduli, nessun nodo sbilanciato. Punti 6 e 7 della §9.4 chiusi.
+- **Nodi:** 10 risolti dal sistema (366 e 817 esclusi); 1369 diventa bilanciato ($\beta$ = 11.7, sotto la soglia), gli altri 9 asimmetrici con $\psi$ entro ±0.02 dal run precedente.
+- **Validazione GNSS (48 stazioni):** RMSE da 0.60 (DTM grezzo) a 0.36 m in entrambi i moduli; errore medio da +0.56 a +0.12 m. Senza s006: 0.30 m.
+- **I due moduli non sono distinguibili:** differenza di RMSE +0.4 cm [−0.1, +0.9]; MM più vicino in 3 stazioni, HM in 8, 37 pari (p ≈ 0.23). Differiscono solo nelle 11 stazioni dei tratti a canali multipli.
+- **$z_{DTM}$ resta l'errore dominante:** confermata alla sezione 170 la causa 1 della §9.6 (nodata −32767 dei DTM di segmento non convertito), con il filtro sui salti che sposta l'errore sulle sezioni sane. Correzione in attesa di decisione.
+- **Da decidere ora:** correzione di $z_{DTM}$ (§9.6), gestione delle parità nel test del segno, classi delle stazioni (troppo poche fuori dal canale singolo).
+
+---
+
 ## 1. Introduzione e notazione
 
 Il framework corregge le quote del DTM nell'area bagnata dell'Orco ricostruendo la quota del fondo $\eta$ di ogni sezione trasversale rettangolarizzata. Due moduli condividono la stessa geometria e la stessa topologia di rete, ma usano principi diversi: il **modulo idraulico** impone solo vincoli di moto uniforme e di continuità della portata liquida; il **modulo morfodinamico** aggiunge il trasporto solido frazionario (due classi, grossolana C e fine F) e la continuità del sedimento, in condizioni di equilibrio.
@@ -629,21 +644,25 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 
 | # | Punto | Stato | Prossimo passo |
 | --- | --- | --- | --- |
-| 1 | **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione al nodo (§9.3) | aperto | — |
-| 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico; $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
+| 1 | **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione al nodo (§9.3) | aperto; confermato dal run del 18/11 sera: a 1369 $\beta$ passa da 12.0 a 11.7 e il nodo diventa bilanciato (§9.8) | sponde cercate solo nel canale attivo che alimenta il nodo |
+| 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico (5 su 10 nel run del 18/11 sera); $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
 | 3 | **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s) | aperto | — |
-| 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto | — |
+| 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto (invariato nel run del 18/11 sera) | — |
 | 5 | **Validazione con i dati ADCP** (quella GNSS è nella §9.5) | da fare | — |
-| 6 | **Portata non conservata nel modulo idraulico:** il tratto 6 riceveva la portata del tratto 5 e da lì la rete portava 9.99 invece di 10.80 m³/s (§9.5) | corretto nel codice (`Final/Preprocessing_HydraulicModule.m`, la portata si propaga solo dentro lo stesso tratto) | rilanciare modulo idraulico, modulo morfodinamico e `ModuleComparison.m`; il bilancio della portata del modulo idraulico deve risultare chiuso a tutti i nodi |
-| 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | deciso e implementato in `Final` (`no_flow_segments = [15 16 29]`): portata nulla, fondo non ricostruito, nessun sistema del nodo a 366 e 817 | rilanciare; resta aperta, come estensione, la rete alla portata bankfull |
-| 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | da sistemare | verificare le cause (nodata dei DTM di segmento, riempimento, media lungo la sezione); poi $z_{DTM}$ dal DTM completo con nodata come NaN, mediana sui pixel bagnati, profilo monotono lungo il tratto |
+| 6 | **Portata non conservata nel modulo idraulico:** il tratto 6 riceveva la portata del tratto 5 e da lì la rete portava 9.99 invece di 10.80 m³/s (§9.5) | **chiuso** (§9.8): bilancio chiuso a tutti i nodi in entrambi i moduli (sbilancio massimo 4.6·10⁻¹² m³/s), 10.80 m³/s all'uscita | — |
+| 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | **chiuso per le condizioni del volo** (§9.8): 366 e 817 "branch without discharge" in entrambi i moduli; 127 559 pixel bagnati (6.4%) restano al DTM grezzo; nessuna stazione GNSS coinvolta | resta aperta, come estensione, la rete alla portata bankfull (limiti del paper) |
+| 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | causa confermata alla sezione 170 (§9.8): nodata dei DTM di segmento, propagato dal filtro sui salti; stesso schema a sezioni alterne a s019 (1160, 1162) e s020 (1174, 1176) | decidere e implementare la proposta della §9.6 (DTM completo con nodata NaN, mediana sui pixel bagnati, profilo monotono; cosa fare del filtro sui salti e di `segments_to_smooth`); poi rilanciare i tre script |
 | 9 | **Stazioni GNSS ambigue** s003, s007, s015, s035 (punti su due tratti) | da verificare | assegnare il tratto a mano sulla mappa `GNSS_station_assignment.png` |
-| 10 | **Classe "a valle di una biforcazione":** 12 delle 18 stazioni erano nel tratto 30, lungo 1.8 km | da rivalutare dopo il punto 7 (il tratto 30 diventa canale singolo) | con la nuova rete guardare quante stazioni restano per classe e la differenza tra i moduli in funzione della distanza dal nodo |
-| 11 | **Errore sistematico positivo** del DTM corretto (+0.17–0.26 m), più forte nella rete a canali multipli | aperto | verificare dopo i punti 6 e 7; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
+| 10 | **Classi delle stazioni:** con la nuova rete 37 stazioni su 48 sono nel canale singolo; restano 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 negli altri tratti a canali multipli, con intervalli molto larghi (§9.8) | da decidere | due classi (canale singolo, 37, contro canali multipli, 11) oppure differenza tra i moduli in funzione della distanza dal nodo |
+| 11 | **Errore sistematico positivo** del DTM corretto: sceso a +0.12 m (per punto) dopo i punti 6 e 7; +0.15–0.16 m senza s006, +0.30 m negli altri tratti a canali multipli (§9.8) | aperto | rivedere dopo il punto 8; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
 | 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`: RMSE, errore medio, mediana e NMAD con intervallo per stazione, riduzione dell'RMSE rispetto al DTM grezzo e differenza tra i moduli con intervallo appaiato | nel paper riportare questi intervalli al posto di quelli di `validation_gnss_mean.m` (vedi PaperBAT, 5.5) |
-| 13 | **Confronto dei due moduli da ripetere** (§9.5) | in attesa | dopo i punti 6, 7 e 8 |
+| 13 | **Confronto dei due moduli da ripetere** (§9.5) | ripetuto dopo i punti 6 e 7 (§9.8): differenza non significativa | ripetere dopo il punto 8 |
+| 14 | **Test del segno e parità:** `compare_modules_gnss.m` (righe 111–112 e 170–171) conta come vittorie le stazioni con RMSE uguale nei due moduli a meno di 10⁻¹¹ (37 su 48), che finiscono a HM o a MM per rumore di arrotondamento; nel log risulta "MM migliore in 9/48, p = 4·10⁻⁵". La colonna `MM_minus_HM_cm` della tabella delle stazioni è la differenza dell'errore medio, non dell'RMSE | da correggere | escludere le parità con una tolleranza (1 mm: MM più vicino in 3, HM in 8, 37 pari, p ≈ 0.23); rinominare la colonna o aggiungere la differenza di RMSE |
+| 15 | **Trasporto solido al volo praticamente nullo:** i flussi solidi di MM alla portata del volo sono 10⁻¹⁶–10⁻²¹ m³/s, quindi le ripartizioni $\psi_x$ al volo agiscono su quantità nulle | da verificare | confermare che è atteso (10.8 m³/s è molto sotto la soglia di moto) e dichiararlo: al volo il modulo morfodinamico agisce solo tramite $\psi$ |
 
 ### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
+
+> **Nota (19/11/2026).** I numeri di questa sezione vengono dal run del 18/11 pomeriggio, prima della correzione della portata e dei rami 15, 16, 29. I numeri aggiornati sono nella §9.8; questa sezione resta come documentazione del metodo e del run precedente.
 
 Il confronto tra i due moduli si ripete con `Final/ModuleComparison.m` (dopo i due moduli; figure e tabelle in `Output_folder/04_Validation/ModuleComparison`).
 
@@ -704,6 +723,8 @@ Questi valori sono ricavati a ritroso dalle quote di fondo. Vanno confermati con
 2. **Riempimento dei vuoti.** I DTM di segmento sono riempiti (i vuoti sull'acqua sono interpolati) e il riempimento può dare quote più basse del pelo libero.
 3. **Media lungo tutta la sezione.** La media comprende tutto ciò che sta tra il primo e l'ultimo pixel della maschera, comprese isole o barre in mezzo.
 
+**Verifica alla sezione 170 (18/11/2026).** Confermata la causa 1, con un effetto aggiuntivo del filtro sui salti; le cause 2 e 3 non sono confermate in questo punto. Dettagli nella §9.8.
+
 **Proposta di correzione.**
 
 1. Calcolare $z_{DTM}$ dal DTM LiDAR completo, con il nodata convertito in NaN, solo sui pixel bagnati della sezione (maschera dell'area bagnata), con la mediana invece della media.
@@ -736,6 +757,68 @@ Ne segue che la rete cambia con la portata: alle condizioni del volo i due rami 
 
 Con la nuova rete i tratti 17, 20, 28, 30, 33 e 35 tornano a canale singolo (portano tutta la portata), per cui la classificazione delle stazioni per tipo di tratto della §9.5 cambia: per esempio le 12 stazioni del tratto 30 passano da "a valle di una biforcazione" a "canale singolo".
 
+### 9.8 Run del 18/11/2026 (sera): rete corretta
+
+Run con la portata propagata solo dentro il tratto (punto 6 della §9.4) e i tratti 15, 16, 29 senza portata (`no_flow_segments`, §9.7); config con `node_width_source = 'dtm'`. I tre script (`Preprocessing_HydraulicModule`, `MorphodynamicModule`, `ModuleComparison`) terminano senza errori. Warning non bloccanti nel modulo morfodinamico: tirante di sfioro sotto quello critico (quindi $D_{bf}=D_c$) in 17 sezioni; sezione 484 con NaN nel profilo; larghezza bankfull del ramo 2 della Bif 469 non calcolabile (si usa il rapporto delle maschere). Figure e tabelle in `Final/Output_folder` (resoconto completo: `Output_folder/RESOCONTO.md`).
+
+**Bilancio di portata.** Nessun nodo sbilanciato in nessuno dei due moduli: lo sbilancio massimo è 4.6·10⁻¹² m³/s (HM, nodo 205), in MM è nullo; la portata è costante dentro ogni tratto. I tratti senza valle sono esattamente quelli attesi: 15 e 29 (Q = 0) e 42 (uscita, 10.80 m³/s in entrambi i moduli; prima HM 9.99 → 7.83, MM 6.75). Le portate dei rami differiscono tra i moduli soprattutto nei tratti 10 (HM 2.86, MM 5.75 m³/s), 9 (7.94 contro 5.05), 4/6 (5.81 contro 3.81) e 22 (7.08 contro 5.49).
+
+**Nodi.** 366 e 817 sono "branch without discharge" in entrambi i moduli. Gli altri 10 nodi sono risolti dal sistema (residuo ≤ 1.9·10⁻¹⁵):
+
+| Bif | $\beta$ | $\psi$ | $W_1/W_0$ | $\psi_{hyd}$ | soluzioni | tipo | $\theta/\theta_c$ madre | run prec. (§9.3): $\beta$ / $\psi$ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 15 | 31.1 | 0.41 | 0.69 | 0.49 | 3 | asimmetrica | 1.00 | 31.1 / 0.41 |
+| 106 | 23.0 | 0.35 | 0.59 | 0.54 | 3 | asimmetrica | 1.62 | 23.0 / 0.35 |
+| 205 | 13.7 | 0.47 | 0.35 | 0.74 | 3 | asimmetrica | 1.10 | 13.9 / 0.47 |
+| 244 | 30.9 | 0.80 | 0.66 | 0.76 | 3 | asimmetrica | 1.25 | 31.2 / 0.80 |
+| 469 | 14.2 | 0.71 | 0.68 | 0.67 | 3 | asimmetrica | 1.20 | 15.4 / 0.72 |
+| 584 | 33.3 | 0.51 | 0.79 | 0.66 | 3 | asimmetrica | 1.00 | 33.6 / 0.51 |
+| 645 | 28.0 | 0.46 | 0.72 | 0.35 | 3 | asimmetrica | 1.00 | 28.3 / 0.46 |
+| 1070 | 16.3 | 0.78 | 0.80 | 0.83 | 3 | asimmetrica | 1.00 | 14.4 / 0.76 |
+| 1293 | 18.4 | 0.69 | 0.60 | 0.67 | 3 | asimmetrica | 1.00 | 18.6 / 0.69 |
+| 1369 | **11.7** | 0.23 | 0.23 | 0.27 | **1** | **bilanciata** | 1.62 | 12.0 / 0.26 |
+
+1369 diventa bilanciato: con $\beta$ = 11.7, sotto la soglia critica (≈ 12–13), esiste solo la soluzione $\psi=W_1/W_0$. È un'ulteriore conferma della sensibilità a $\beta$ (§9.3, punto 1 della §9.4). Il tirante bankfull è quello critico in 5 madri su 10 (prima 9 su 12); 106 e 1369 sono al tirante di Shields, 205, 244 e 469 al livello di sfioro. In 205, 584 e 645 $\psi$ resta lontano da $\psi_{hyd}$ (punto 4).
+
+**Trasporto solido al volo.** I flussi solidi alla portata del volo sono dell'ordine di 10⁻¹⁶–10⁻²¹ m³/s (per esempio Bif 15: $Q_{s,F}$ della madre 1.4·10⁻¹⁶ m³/s): a 10.8 m³/s si è molto sotto la soglia di moto. Al volo, quindi, il modulo morfodinamico agisce sul fondo solo attraverso la ripartizione della portata $\psi$; le ripartizioni $\psi_x$ dei flussi solidi agiscono su quantità nulle (punto 15 della §9.4).
+
+**Area non corretta.** 127 559 pixel bagnati (6.4% dell'area bagnata) restano al DTM grezzo, gli stessi nei due moduli: sono i tratti 15, 16, 29 (sezioni 367–445 e 818–888). Non contengono stazioni GNSS; i punti GNSS dentro l'area corretta restano 956.
+
+**Validazione GNSS** (48 stazioni, 956 punti; m; intervalli al 95% dal bootstrap delle stazioni). Classi delle stazioni con la nuova rete: canale singolo 37 stazioni / 752 punti; a valle di una biforcazione 5 / 110 (s003, s015, s016, s032, s046); a valle di una confluenza 1 / 20 (s048); altri tratti a canali multipli 5 / 74 (s007, s008, s044, s045, s047).
+
+| Gruppo | st / pt | RMSE grezzo | RMSE HM | RMSE MM | ME grezzo / HM / MM | RMSE MM − HM |
+| --- | --- | --- | --- | --- | --- | --- |
+| Canale singolo | 37 / 752 | 0.61 [0.53–0.68] | 0.38 [0.24–0.52] | 0.38 [0.24–0.52] | +0.57 / +0.12 / +0.12 | +0.000 |
+| Canale singolo senza s006 | 36 / 735 | 0.61 [0.54–0.69] | 0.30 [0.23–0.38] | 0.30 [0.23–0.38] | +0.58 / +0.16 / +0.16 | 0.000 |
+| A valle di una biforcazione | 5 / 110 | 0.47 [0.37–0.61] | 0.15 [0.12–0.18] | 0.15 [0.11–0.21] | +0.43 / +0.04 / +0.05 | 0.000 [−0.030, +0.034] |
+| A valle di una confluenza | 1 / 20 | 0.35 | 0.04 | 0.04 | +0.35 / +0.03 / +0.03 | 0.000 |
+| Altri tratti a canali multipli | 5 / 74 | 0.74 [0.36–1.03] | 0.44 [0.09–0.60] | 0.47 [0.10–0.64] | +0.63 / +0.30 / +0.29 | +0.035 [−0.005, +0.047] |
+| **Tutte** | 48 / 956 | 0.60 [0.53–0.67] | **0.36 [0.25–0.48]** | **0.36 [0.25–0.49]** | +0.56 / +0.12 / +0.12 | **+0.004 [−0.001, +0.009]** |
+| Tutte senza s006 | 47 / 939 | 0.60 [0.53–0.68] | 0.30 [0.23–0.36] | 0.30 [0.23–0.37] | +0.56 / +0.15 / +0.15 | +0.004 [−0.001, +0.011] |
+
+La riduzione dell'RMSE rispetto al DTM grezzo (intervallo appaiato per stazione) è +0.24 m su tutte le stazioni (HM [+0.11, +0.34], MM [+0.10, +0.34]) e +0.31 / +0.30 m senza s006 (HM [+0.26, +0.35], MM [+0.26, +0.35]). Rispetto al run precedente (§9.5) l'errore medio per punto scende da +0.17 a +0.12 m (HM) e da +0.19 a +0.12 m (MM); l'RMSE per stazione da 0.38/0.39 a 0.36/0.36 m.
+
+**Confronto tra i moduli.** La differenza di RMSE MM − HM su tutte le stazioni è +0.4 cm [−0.1, +0.9]: l'intervallo comprende lo zero, e i due moduli non sono distinguibili (prima +1.3 cm [+0.7, +1.8]). Nelle 37 stazioni del canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso RMSE. Escludendo queste parità (|ΔRMSE| ≤ 1 mm), MM è più vicino ai GNSS in 3 stazioni (s003 −6.0, s047 −6.5, s015 −0.9 cm) e HM in 8 (s044 +9.4, s046 +8.4, s045 +5.1, s008 +4.6, s007 +4.5, s032 +1.1, s016 +0.9, s006 +0.3 cm): test del segno p ≈ 0.23. Il "9/48, p = 4·10⁻⁵" del log conta le parità numeriche (punto 14 della §9.4) e non va usato.
+
+La mappa delle differenze MM − HM (1 740 047 pixel corretti) ha media −0.001 m e range [−0.24, +0.16] m; il 72.6% dei pixel ha |dZ| ≤ 5 mm e il P95 di |dZ| è 0.06 m. Le differenze si concentrano nei tratti a canali multipli (tratti 1–2, 4–13, 21–27; rami 31–32, 34/36, 38–39); la differenza media più grande è nel tratto 10 (−18.6 cm), dove la portata di MM è doppia di quella di HM.
+
+**Residui negativi forti e $z_{DTM}$.** I residui di s006 (−1.47 m), s019 (−0.77) e s020 (−0.45) non cambiano: non dipendevano dalla portata. Alle sezioni assegnate a queste stazioni $z_{DTM}$ è più bassa del DTM completo sull'asse di 1.56 m (170), 1.18 m (1160) e 0.61 m (1176), a sezioni alterne: dove $z_{DTM}$ è giusta coincide con il DTM completo entro 2–3 cm.
+
+Il controllo alla sezione 170 (`check_zDTM_section170.png`, `log_zDTM_check_170*.txt`) mostra il meccanismo:
+
+1. Il DTM di segmento `dtm_008` contiene 141 870 pixel con il nodata −32767, non convertito in NaN. Alle sezioni 169 e 171 l'interpolazione bilineare vicino a questi pixel dà valori positivi ma falsi (211.91 e 107.50 m), che il filtro sui valori negativi non toglie e che abbassano la media di 1.32 e 1.84 m.
+2. La quota grezza della 170 è invece giusta (255.47 m).
+3. Il filtro sulle oscillazioni isolate segnala 169–172 e sostituisce ogni sezione con la media delle due vicine grezze: la 170 diventa (254.23 + 253.57)/2 = 253.90 m. Il filtro sposta così l'errore sulle sezioni sane.
+
+La causa 1 della §9.6 è confermata; le cause 2 (riempimento: DTM di segmento uguale al DTM completo entro ±2 cm) e 3 (media lungo la sezione: media e mediana differiscono di 1 cm) non lo sono alla 170. Le sezioni 1160, 1162, 1174 e 1176 mostrano lo stesso schema, ma non sono state verificate pixel per pixel. Una nota minore: la griglia di `interp2` è costruita con `linspace` sui limiti della maschera (passo 0.5016 m invece di 0.5 m), con uno sfasamento fino a circa 0.25 m ai bordi, trascurabile su sezioni piatte.
+
+**Conclusioni.**
+
+1. Con la rete corretta la portata si conserva ovunque (punti 6 e 7 chiusi) e l'errore medio scende a +0.12 m in entrambi i moduli.
+2. I due moduli danno lo stesso RMSE (0.36 m, 0.30 m senza s006) e la loro differenza non è significativa. Differiscono solo nelle 11 stazioni fuori dal canale singolo, troppo poche per un confronto per classe.
+3. L'errore dominante resta $z_{DTM}$ (nodata dei DTM di segmento più filtro sui salti): va corretto prima di ripetere il confronto.
+4. Il contributo del modulo morfodinamico resta la coerenza fisica della ripartizione ai nodi, non l'accuratezza del fondo (§9.5, conclusione 6); al volo agisce solo tramite $\psi$, perché il trasporto solido è nullo.
+
 ---
 
 ## Registro modifiche
@@ -752,3 +835,4 @@ Con la nuova rete i tratti 17, 20, 28, 30, 33 e 35 tornano a canale singolo (por
 | 18/11/2026 | Aggiunte la §9.6 (quota di partenza $z_{DTM}$: problema, cause possibili, proposta) e la §9.7 (rami 16–15 e 29); aggiornati i punti 7 e 8 della §9.4; nota in testa alla §7 che rimanda alla §9.4. |
 | 18/11/2026 | §9.7 e punto 7 della §9.4: aggiunte le osservazioni sul campo sui rami 16–15 e 29 (quasi fermi al volo, attivi a portate più alte). |
 | 18/11/2026 | §9.7: scelte adottate per i rami 15, 16 e 29 (portata nulla, fondo non ricostruito, nessun sistema del nodo), implementate in `Final`. §9.4: aggiornati i punti 7, 10 e 12. |
+| 19/11/2026 | Aggiunta in testa la sezione "Stato del lavoro" (resoconto per giornata). Aggiunta la §9.8: risultati dei run del 18/11 sera con la rete corretta (bilancio di portata, nodi, validazione GNSS, confronto dei moduli, verifica di $z_{DTM}$ alla sezione 170). §9.4: chiusi i punti 6 e 7, aggiornati 1, 2, 4, 8, 10, 11, 13; nuovi punti 14 (parità nel test del segno) e 15 (trasporto al volo nullo). Nota in testa alla §9.5 e verifica in §9.6. |
