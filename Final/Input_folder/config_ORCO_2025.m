@@ -11,6 +11,7 @@ mask_segments_pattern = fullfile('Mask_segments', 'I_*.tif');     % binary mask 
 dtm_file      = fullfile('DTM',          'cutDTM_50cm_ORCO_UTM32N_ETRF2000.tif'); % full LiDAR DTM
 wetarea_file  = fullfile('WetArea_mask', 'I_wetarea_2025.tif');   % wet area mask (same grid as the DTM)
 gnss_file     = fullfile('GNSS',         'punti_bat.csv');        % GNSS points 07/03/2025
+adcp_file     = fullfile('GNSS',         'punti_bat_ADCP.csv');   % ADCP transects 07/03/2025 (Z_BOTTOM ellipsoidal)
 crs_code      = 32632;                                            % EPSG of the output GeoTIFFs
 
 %% Pre-processing
@@ -43,6 +44,21 @@ no_flow_segments = [15 16 29];
 % Targeted smoothing of segments with systematic oscillation of z
 segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
                             'window', {7,  7,  7,  7,  7,  7,  9});
+
+%% Validation (field points: GNSS cross-sections by wading + ADCP transects)
+% Each ADCP transect is a station (a01, a02, ...) treated like a GNSS cross-section.
+% Minimum distance [m] between kept ADCP points along a transect; 0 = all the
+% points. STAND-BY: thinning to a spacing similar to the GNSS one (~1.5 m) is a
+% question for Carlo (Domande_per_Carlo.md, 6).
+adcp_min_spacing = 0;
+% GNSS cross-sections that cross more than one segment: split into sub-stations
+% (sNNN_tCC), one per segment, each compared with the mean of its own points.
+% {station, first point, last point, segment code}; s015 still to be defined.
+gnss_station_split = {'s003',  1, 13,  9;
+                      's003', 14, 21, 11;
+                      's003', 22, 29, 12;
+                      's007',  1, 16,  6;
+                      's007', 17, 25,  7};
 
 %% Hydraulic module
 g = 9.81;

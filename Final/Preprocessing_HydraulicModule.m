@@ -1256,7 +1256,9 @@ end
 %% ============================================================
 %% VALIDATION
 %% ============================================================
-[Tstats, Tsec] = validation_gnss_mean(fullfile(input_dir, gnss_file), raster_dtm, raster_dtm_corrected, R_dtm, mask_extended, out_val)
+field_pts = read_field_points(fullfile(input_dir, gnss_file), fullfile(input_dir, adcp_file), ...
+    gnss_station_split, adcp_min_spacing);   % GNSS cross-sections + ADCP transects
+[Tstats, Tsec] = validation_gnss_mean(field_pts, raster_dtm, raster_dtm_corrected, R_dtm, mask_extended, out_val)
 % RMSE/MAE improve (the model corrects the large, systematic errors well),
 % but it introduces its own "typical" scatter, which the rectangularisation alone does not explain.
 

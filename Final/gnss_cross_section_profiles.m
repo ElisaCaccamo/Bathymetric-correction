@@ -70,13 +70,18 @@ for k = 1:ns
     [~, ig] = ismember(lower(name_hm(sel)), lower(gname));
     [~, im] = ismember(name_hm(sel), name_mm);
     zm = T_hm.z_gnss_station_mean(sel(1));
-    good = ig > 0;
-    if abs(mean(z_ell(ig(good))) - zm) <= abs(mean(z_ort(ig(good))) - zm)
-        zg_all = z_ell;  datum = 'ellipsoidal';
+    if ismember('z_point', T_hm.Properties.VariableNames)
+        zg = T_hm.z_point(sel);   % own elevation of each point (GNSS or ADCP), datum of the validation
+        datum = 'datum of the validation';
     else
-        zg_all = z_ort;  datum = 'orthometric';
+        good = ig > 0;
+        if abs(mean(z_ell(ig(good))) - zm) <= abs(mean(z_ort(ig(good))) - zm)
+            zg_all = z_ell;  datum = 'ellipsoidal';
+        else
+            zg_all = z_ort;  datum = 'orthometric';
+        end
+        zg = nan(numel(sel), 1);  zg(good) = zg_all(ig(good));
     end
-    zg = nan(numel(sel), 1);  zg(good) = zg_all(ig(good));
 
     % distance along the main direction of the measured section
     P = [T_hm.X(sel), T_hm.Y(sel)];

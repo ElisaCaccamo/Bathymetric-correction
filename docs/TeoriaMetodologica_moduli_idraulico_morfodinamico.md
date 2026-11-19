@@ -18,9 +18,10 @@ Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i pun
 - **I due moduli non sono distinguibili:** differenza di RMSE +0.4 cm [−0.1, +0.9]; MM più vicino in 3 stazioni, HM in 8, 37 pari (p ≈ 0.23). Differiscono solo nelle 11 stazioni dei tratti a canali multipli.
 - **$z_{DTM}$ resta l'errore dominante:** confermata alla sezione 170 la causa 1 della §9.6 (nodata −32767 dei DTM di segmento non convertito), con il filtro sui salti che sposta l'errore sulle sezioni sane. Correzione in attesa di decisione.
 - **Corretto `compare_modules_gnss.m`:** il test del segno esclude le parità (|ΔRMSE| ≤ 1 mm, parametro `tie_tol`); la tabella delle stazioni riporta sia la differenza di RMSE sia quella dell'errore medio. Il resoconto del run contava come "MM più vicino" le stazioni con fondo MM più basso: i numeri corretti sono 3 contro 8 (punto 14 della §9.4). Va rilanciato `ModuleComparison`.
-- **Domande per Carlo:** raccolte nella §8.2 (classi delle stazioni, larghezza bankfull, $\theta^*_{BF}$, portata bankfull, regola di scelta, trasporto al volo, rete alla portata bankfull, ADCP).
+- **Domande per Carlo:** in un file a parte, `docs/Domande_per_Carlo.md` (classi delle stazioni, $\theta^*_{BF}$, portata bankfull, regola di scelta, ruolo del trasporto al volo, densità dei punti ADCP). La vecchia §8 è stata tolta da questo documento.
+- **Dati ADCP nella validazione:** gli 8 transetti ADCP del 07/03/2025 entrano come stazioni a01–a08, senza distinzione dalle sezioni GNSS; quota ellissoidica verificata. Le sezioni GNSS s003 e s007, che attraversano più tratti, sono divise in sottostazioni assegnate a mano (s015 da definire). Nuova funzione `read_field_points.m` (§9.9). La densità dei punti ADCP resta in sospeso fino alla risposta di Carlo.
 - **Correzione di $z_{DTM}$, primo passo (deciso il 19/11):** si tiene l'approccio attuale e si corregge solo il nodata. In `Preprocessing_HydraulicModule.m` il nodata −32767 dei DTM di segmento diventa NaN alla lettura; in `calculate_widths.m` la media della sezione esclude esplicitamente i NaN. Da rilanciare il pre-processing e guardare i risultati (salti segnalati dal filtro, oscillazioni dei tratti di `segments_to_smooth`, $z_{DTM}$ contro il DTM completo a s006, s019, s020) prima di decidere sul profilo monotono (§9.6).
-- **Da decidere ora:** come presentare il contributo del modulo morfodinamico nel paper; validazione con i dati ADCP (`punti_bat_ADCP.csv`, 8 transetti del 07/03/2025).
+- **Prossimi passi:** rilanciare i tre script (pre-processing, modulo morfodinamico, `ModuleComparison`) con la correzione del nodata, i dati ADCP e le sottostazioni; definire la divisione di s015; decidere come presentare il contributo del modulo morfodinamico nel paper.
 
 ---
 
@@ -537,78 +538,9 @@ In questi nodi il risultato è quindi idraulico (moto uniforme con ripartizione 
 
 ---
 
-## 8. Domande per Carlo
-
-### 8.1 Ottobre 2026
-
-1. Al nodo, la pendenza di madre e rami si può calcolare su una finestra di lunghezza fissa $L$ invece che con la regressione sull'intero tratto (§7.2 A)? Se sì, con quale $L$?
-2. Quando la regressione dà una pendenza nulla o negativa, è meglio usare la pendenza del tratto adiacente (§7.2 B) o modificare il valore di ripiego $1.6\cdot10^{-4}$ (§7.2 C)? In questo secondo caso, con quale criterio va scelto il nuovo valore?
-3. Il tirante bankfull di Shields ($\theta^*_{BF}=1.62\,\theta^*_c$) supera l'altezza delle sponde in molti tratti a canali multipli. È meglio limitarlo con il livello di sfioro del transetto (§7.3 A) o calibrare $\theta^*_{BF}$ sull'Orco (§7.3 B)?
-4. Quando la larghezza bankfull non è calcolabile, si può usare quella della maschera e, se si trova una sola sponda, calcolare l'area sul semi-transetto e raddoppiarla (§7.4)?
-5. Se a bankfull un ramo si chiude ($q_2\le0$, nodo 106) ma è bagnato il giorno del volo, va considerato un risultato fisico o un segnale di dati in ingresso non affidabili?
-6. Per i nodi che restano non risolti, è accettabile la ripartizione proporzionale alle larghezze (§7.6), dichiarando nei risultati che lì le quote di fondo sono idrauliche e non morfodinamiche?
-
-### 8.2 19/11/2026
-
-Domande nate dai run del 18/11/2026 (§9.8). Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
-
-**1. Classi delle stazioni GNSS per la validazione.**
-
-*Contesto.* Una delle sotto-domande del paper è dove il modulo morfodinamico migliora quello idraulico: nel canale singolo, a valle delle biforcazioni o a valle delle confluenze. Per rispondere, ognuna delle 48 stazioni GNSS (sezioni trasversali misurate) viene assegnata a un tipo di tratto, ricavato dalla topologia della rete. Con la rete corretta (rami 15, 16, 29 senza portata) le stazioni sono: 37 nel canale singolo, 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 in altri tratti a canali multipli. Nel canale singolo i due moduli hanno la stessa portata e lo stesso fondo, quindi lo stesso errore per costruzione: il confronto tra i moduli si gioca solo sulle altre 11 stazioni, e con 5, 1 e 5 stazioni per classe gli intervalli di confidenza sono molto larghi (per esempio RMSE 0.09–0.60 m negli altri tratti a canali multipli).
-
-*Domanda.* Come conviene raggruppare le stazioni per il confronto tra i moduli?
-- (a) Due classi: canale singolo (37) contro canali multipli (11).
-- (b) Nessuna classe: differenza tra i moduli in funzione della distanza dal nodo a monte (11 stazioni).
-- (c) Quattro classi solo descrittive, senza intervalli né test.
-- (d) Nuove misure (GNSS o ADCP) nei tratti a canali multipli, per avere più stazioni dove i moduli differiscono.
-
-**2. Stima della larghezza bankfull e rapporto di forma $\beta$.**
-
-*Contesto.* Il tipo di soluzione al nodo dipende dal rapporto di forma bankfull della madre, $\beta=W_0^{bf}/(2D_0)$: sotto ≈ 12–13 esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche (BRT). Oggi $W^{bf}$ si misura sul DTM al livello di sfioro, cercando le sponde fino a $3W^m$ dalla centerline: nei tratti a canali multipli la larghezza comprende anche barre e canali adiacenti. Il test con le larghezze della maschera (§9.3) porta i nodi asimmetrici da 12 a 3; nel run del 18/11 sera il nodo 1369 passa da asimmetrico a bilanciato perché $\beta$ scende da 12.0 a 11.7.
-
-*Domanda.* È corretto cercare le sponde solo nel canale attivo che alimenta il nodo? C'è un criterio di letteratura per la larghezza bankfull dei singoli rami in un fiume a canali multipli? Nel paper basta un'analisi di sensitività su $\beta$, o serve una stima indipendente della larghezza?
-
-**3. Coefficiente $\theta^*_{BF}=1.62\,\theta^*_c$ e sponde basse.**
-
-*Contesto.* Il tirante bankfull della madre è il tirante di Shields $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$, limitato dal livello di sfioro e mai sotto il tirante critico $D_c$ (§9.1). Nel run del 18/11 sera il limite che decide è: tirante critico (sponde più basse di $D_c$) in 5 madri su 10, Shields pieno in 2, livello di sfioro in 3. La fonte del coefficiente 1.62 non è documentata.
-
-*Domanda.* Da quale riferimento viene 1.62? Vale per un fiume ghiaioso a canali multipli come l'Orco, o conviene calibrare $\theta^*_{BF}$ sulle sezioni a canale singolo con sponde ben definite? Limitare il tirante con il livello di sfioro è un criterio accettabile?
-
-**4. Portata bankfull non coerente lungo la rete.**
-
-*Contesto.* Ogni nodo calcola la sua portata bankfull localmente, da larghezza, tirante e pendenza della madre. I valori non sono coerenti lungo la rete: 15: 186, 106: 149, 205: 306, 244: 549, 469: 72, 584: 214, 645: 476, 1070: 23, 1293: 264, 1369: 1118 m³/s (a 1369 il tirante bankfull è 4.0 m).
-
-*Domanda.* Conviene imporre una sola portata formativa all'ingresso della rete e ripartirla con $\psi$ a ogni nodo, così che la portata bankfull sia coerente lungo la rete? Oppure si accettano valori locali, dichiarando che ogni nodo è trattato come isolato? Se si impone una portata unica, con quale criterio sceglierla alla stazione di San Benigno?
-
-**5. Regola di scelta tra le soluzioni asimmetriche.**
-
-*Contesto.* Quando il nodo ha soluzioni asimmetriche, si adotta quella con $\psi$ più vicina a $\psi_{hyd}$, la quota di portata del ramo 1 nel modulo idraulico al volo (§9.1). Nei nodi 205, 584 e 645 nessuna soluzione è vicina: $\psi$ = 0.47 contro $\psi_{hyd}$ = 0.74; 0.51 contro 0.66; 0.46 contro 0.35.
-
-*Domanda.* $\psi_{hyd}$, che descrive la ripartizione a portata ordinaria, è un riferimento adeguato per scegliere tra equilibri che si formano a bankfull? Alternative possibili: scegliere la soluzione in cui il ramo più basso nel DTM è quello che porta più portata, oppure quella coerente con il ramo più largo nella maschera.
-
-**6. Trasporto solido nullo alla portata del volo.**
-
-*Contesto.* Alla portata del volo (10.8 m³/s) i flussi solidi calcolati sono dell'ordine di 10⁻¹⁶–10⁻²¹ m³/s, molto sotto la soglia di moto. Al volo il modulo morfodinamico agisce quindi sul fondo solo tramite la ripartizione della portata $\psi$, ricavata dall'equilibrio bankfull; le ripartizioni dei flussi solidi $\psi_x$ agiscono su quantità nulle.
-
-*Domanda.* È coerente con l'impostazione del metodo (configurazione del nodo formata a bankfull, ritorno al volo solo per la ripartizione della portata)? Va presentato così nel paper?
-
-**7. Rami 16–15 e 29 alla portata bankfull.**
-
-*Contesto.* Al volo i rami 16–15 e 29 sono quasi fermi e il modello li tratta senza portata e senza ricostruzione del fondo (§9.7). Alla portata formativa sono attivi e collegati in modo diverso (il 29 alimentato dal tratto 22, il 16–15 come parte di un meandro), quindi la topologia della rete cambia con la portata.
-
-*Domanda.* Basta dichiararlo tra i limiti del paper, oppure serve costruire la rete alla portata bankfull (per esempio da una maschera dell'area attiva) da usare nel modulo morfodinamico?
-
-**8. Dati ADCP.**
-
-*Contesto.* Al volo i due moduli differiscono solo nella ripartizione della portata ai nodi, e i GNSS misurano il fondo, non la portata dei rami: con le stazioni disponibili i moduli non sono distinguibili (differenza di RMSE +0.4 cm [−0.1, +0.9]). Le misure di portata nei rami sono l'unico dato che può dire quale ripartizione è giusta.
-
-*Domanda.* Quali misure ADCP sono disponibili (date, sezioni, rami, portata del giorno)? Coprono i rami di qualche biforcazione?
-
----
-
 ## 9. Aggiornamento del modulo morfodinamico (novembre 2026)
 
-Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_ORCO_bifurcationsNEW_modifiche_modifiche.mlx`) e il 18/11/2026 (`ORCO_bifurcations.m`) e i risultati dei run del 18/11/2026. Dove è in contrasto con le sezioni precedenti (in particolare §4.3, §5.2–5.3, §6, §7 e §8), vale quanto scritto qui; le sezioni precedenti saranno aggiornate in seguito.
+Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_ORCO_bifurcationsNEW_modifiche_modifiche.mlx`) e il 18/11/2026 (`ORCO_bifurcations.m`) e i risultati dei run del 18/11/2026. Dove è in contrasto con le sezioni precedenti (in particolare §4.3, §5.2–5.3, §6 e §7), vale quanto scritto qui; le sezioni precedenti saranno aggiornate in seguito.
 
 ### 9.1 Modifiche al metodo
 
@@ -623,6 +555,15 @@ D_c = \frac{\theta^*_c\,\Delta\,d_{50}}{S_0}
 $$
 
 $z_{sfioro}$ è il più basso dei due punti più alti del terreno, uno per lato, tra $W^m/2$ e $3W^m$ dalla centerline. Dove il tirante si ferma a $D_c$ (sponde basse) la larghezza resta quella misurata al livello di sfioro. Le larghezze dei rami si misurano con il tirante di Shields calcolato con $S_0$; se non sono calcolabili si usa il rapporto delle larghezze delle maschere.
+
+**Calcolo della larghezza bankfull al nodo (verificato sul codice il 19/11/2026, `W_bankfull_from_dtm.m` e `MorphodynamicModule.m`).** La larghezza non è legata al tirante critico: si misura al livello bankfull di Shields, limitato dalle sponde.
+
+1. Livello di partenza: $\eta_0+D_S$, con $\eta_0$ fondo del modulo idraulico e $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$.
+2. Si traccia il transetto perpendicolare alla centerline sul DTM corretto dal modulo idraulico e si cerca il livello di sfioro $z_{sfioro}$ tra $W^m/2$ e $3W^m$ dalla centerline. Se il livello di Shields supera $z_{sfioro}$, il livello diventa $z_{sfioro}$ − 1 cm.
+3. Le sponde sono le prime intersezioni del livello con il terreno oltre $W^m/2$, una per lato; se si trova un solo lato, l'altro si ottiene per simmetria.
+4. L'area $A$ tra le sponde sotto il livello dà la larghezza rettangolare equivalente $W^{bf}=A/D$, con $D$ profondità del livello sul fondo; si impone $W^{bf}\ge W^m$.
+5. Se la profondità al livello di sfioro è minore del tirante critico $D_c$, il tirante del nodo diventa $D_0=D_c$, ma larghezza e area restano quelle misurate al livello di sfioro (sponde basse, $\theta_{bf}/\theta^*_c=1$).
+6. Per i rami si ripete lo stesso calcolo alla loro prima sezione, con lo stesso $D_S$ (pendenza della madre); le due larghezze si riscalano poi in modo che $W_1+W_2=W_0$.
 
 **Sistema del nodo in forma BRT (6 equazioni).** Come in Bolla Pittaluga et al. (2003) e Ragno et al. (2023), il pelo libero è comune al nodo e i due rami, di uguale lunghezza, terminano allo stesso livello: hanno quindi la stessa pendenza di equilibrio $S_b$, che è un'incognita. Incognite $[\psi, D_1, D_2, S_b, f_{1F}, f_{2F}]$ con $\psi=Q_1/Q_0$; equazioni:
 
@@ -715,12 +656,12 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 | 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico (5 su 10 nel run del 18/11 sera); $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
 | 3 | **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s) | aperto | — |
 | 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto (invariato nel run del 18/11 sera) | — |
-| 5 | **Validazione con i dati ADCP** (quella GNSS è nella §9.5) | da fare | — |
+| 5 | **Dati ADCP** (8 transetti del 07/03/2025) | integrati nel codice il 19/11/2026 come stazioni a01–a08, senza distinzione dalle sezioni GNSS (§9.9) | rilanciare; densità dei punti ADCP in sospeso (domanda 6 a Carlo, `adcp_min_spacing` = 0) |
 | 6 | **Portata non conservata nel modulo idraulico:** il tratto 6 riceveva la portata del tratto 5 e da lì la rete portava 9.99 invece di 10.80 m³/s (§9.5) | **chiuso** (§9.8): bilancio chiuso a tutti i nodi in entrambi i moduli (sbilancio massimo 4.6·10⁻¹² m³/s), 10.80 m³/s all'uscita | — |
 | 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | **chiuso per le condizioni del volo** (§9.8): 366 e 817 "branch without discharge" in entrambi i moduli; 127 559 pixel bagnati (6.4%) restano al DTM grezzo; nessuna stazione GNSS coinvolta | resta aperta, come estensione, la rete alla portata bankfull (limiti del paper) |
 | 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | causa confermata alla sezione 170 (§9.8): nodata dei DTM di segmento, propagato dal filtro sui salti. **Corretto nel codice il 19/11/2026** (§9.6, "Correzione adottata"): nodata −32767 → NaN alla lettura dei DTM di segmento, media della sezione sui soli valori non NaN | rilanciare il pre-processing e i due moduli; controllare salti segnalati, tratti di `segments_to_smooth` e $z_{DTM}$ a s006, s019, s020; poi decidere se serve il profilo monotono e se `segments_to_smooth` resta necessario |
-| 9 | **Stazioni GNSS ambigue** s003, s007, s015, s035 (punti su due tratti) | da verificare | assegnare il tratto a mano sulla mappa `GNSS_station_assignment.png` |
-| 10 | **Classi delle stazioni:** con la nuova rete 37 stazioni su 48 sono nel canale singolo; restano 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 negli altri tratti a canali multipli, con intervalli molto larghi (§9.8) | da decidere | due classi (canale singolo, 37, contro canali multipli, 11) oppure differenza tra i moduli in funzione della distanza dal nodo |
+| 9 | **Stazioni GNSS su più tratti** s003, s007, s015, s035 | s003 (tratti 9, 11, 12) e s007 (tratti 6, 7) divise in sottostazioni assegnate a mano il 19/11/2026 (§9.9) | definire la divisione di s015 (screenshot di Elisa); verificare s035 (89% dei punti sul tratto 20) |
+| 10 | **Classi delle stazioni:** con la nuova rete 37 stazioni su 48 sono nel canale singolo; restano 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 negli altri tratti a canali multipli, con intervalli molto larghi (§9.8) | in attesa della risposta di Carlo (domanda 1) | due classi, distanza dal nodo, o quattro classi solo descrittive; i numeri cambiano con le stazioni ADCP e le sottostazioni |
 | 11 | **Errore sistematico positivo** del DTM corretto: sceso a +0.12 m (per punto) dopo i punti 6 e 7; +0.15–0.16 m senza s006, +0.30 m negli altri tratti a canali multipli (§9.8) | aperto | rivedere dopo il punto 8; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
 | 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`: RMSE, errore medio, mediana e NMAD con intervallo per stazione, riduzione dell'RMSE rispetto al DTM grezzo e differenza tra i moduli con intervallo appaiato | nel paper riportare questi intervalli al posto di quelli di `validation_gnss_mean.m` (vedi PaperBAT, 5.5) |
 | 13 | **Confronto dei due moduli da ripetere** (§9.5) | ripetuto dopo i punti 6 e 7 (§9.8): differenza non significativa | ripetere dopo il punto 8 |
@@ -897,6 +838,28 @@ La causa 1 della §9.6 è confermata; le cause 2 (riempimento: DTM di segmento u
 3. L'errore dominante resta $z_{DTM}$ (nodata dei DTM di segmento più filtro sui salti): va corretto prima di ripetere il confronto.
 4. Il contributo del modulo morfodinamico resta la coerenza fisica della ripartizione ai nodi, non l'accuratezza del fondo (§9.5, conclusione 6); al volo agisce solo tramite $\psi$, perché il trasporto solido è nullo.
 
+### 9.9 Dati di validazione: GNSS e ADCP (19/11/2026)
+
+**Due modalità di rilievo, una sola validazione.** I dati di campo del 07/03/2025 vengono da due modalità: sezioni trasversali rilevate a guado con antenna GNSS (`punti_bat.csv`, 48 sezioni) e transetti ADCP (`punti_bat_ADCP.csv`, 8 transetti, 1024 punti). Nella validazione non si distinguono: ogni sezione GNSS e ogni transetto ADCP è una stazione, confrontata con la sua quota media come descritto nella §9.5. Nel paper si dichiara solo che i dati provengono dalle due modalità. Le stazioni passano da 48 a 56 (le sottostazioni qui sotto ne aggiungono altre).
+
+**Lettura dei dati ADCP** (`read_field_points.m`). Il file ha le colonne `N_UTM32N, E_UTM32N, Z_BOTTOM` e un quarto campo compilato solo sulla prima riga di ogni transetto (per esempio `20250307151356_-1sec`): da lì inizia un nuovo transetto. I transetti diventano le stazioni a01–a08, nell'ordine del file. Sono lunghi 14–41 m, nella parte di valle della rete, vicino alle stazioni GNSS s009, s010, s015, s016, s022 e s023.
+
+**Quota di riferimento.** $Z_{BOTTOM}$ è una quota ellissoidica, lo stesso riferimento del DTM. Verifica del 19/11/2026: nei transetti 3, 4 e 7 la quota ADCP differisce di 4–9 cm da quella ellissoidica dei punti GNSS più vicini (28–43 m), mentre la quota ortometrica è più bassa di circa 48 m.
+
+**Densità dei punti (in sospeso).** L'ADCP registra un punto ogni 0.1–0.3 m e resta fermo qualche secondo all'inizio dei transetti (49–271 punti per transetto); il GNSS ha un punto ogni 1.5 m circa (mediana 20 punti per stazione). Nelle statistiche calcolate su tutti i punti insieme un transetto ADCP pesa quindi molto più di una stazione GNSS. Il parametro `adcp_min_spacing` del config dirada i punti ADCP; per ora vale 0 (tutti i punti), in attesa della risposta di Carlo (`docs/Domande_per_Carlo.md`, domanda 6).
+
+**Sezioni GNSS su più tratti.** Alcune sezioni GNSS attraversano più rami. Come stazione unica, sono confrontate con una media che mescola fondi diversi e assegnate al tratto della maggioranza dei punti. Vengono quindi divise in sottostazioni, una per tratto, ognuna confrontata con la media dei suoi punti. Il tratto è assegnato a mano (`gnss_station_split` nel config) e non dalla sezione della centerline più vicina:
+
+| Stazione | Punti | Tratto | Sottostazione |
+| --- | --- | --- | --- |
+| s003 | p001–p013 | 9 | s003_t09 |
+| s003 | p014–p021 | 11 | s003_t11 |
+| s003 | p022–p029 | 12 | s003_t12 |
+| s007 | p001–p016 | 6 | s007_t06 |
+| s007 | p017–p025 | 7 | s007_t07 |
+
+s015 è ancora da definire. s007 attraversa i due canali (tratti 6 e 7), separati da una barra centrale, che confluiscono nel tratto 8 dove si trova s006. Le sottostazioni dello stesso transetto misurano il fondo di rami diversi nello stesso punto della rete: confrontano direttamente il dislivello tra i rami, che dipende dalla ripartizione della portata. Un caso simile, ma con stazioni già separate, è quello di s046 (tratto 24) e s047 (tratto 26), che confluiscono nel tratto 27 dove si trova s048.
+
 ---
 
 ## Registro modifiche
@@ -914,5 +877,6 @@ La causa 1 della §9.6 è confermata; le cause 2 (riempimento: DTM di segmento u
 | 18/11/2026 | §9.7 e punto 7 della §9.4: aggiunte le osservazioni sul campo sui rami 16–15 e 29 (quasi fermi al volo, attivi a portate più alte). |
 | 18/11/2026 | §9.7: scelte adottate per i rami 15, 16 e 29 (portata nulla, fondo non ricostruito, nessun sistema del nodo), implementate in `Final`. §9.4: aggiornati i punti 7, 10 e 12. |
 | 19/11/2026 | Aggiunta in testa la sezione "Stato del lavoro" (resoconto per giornata). Aggiunta la §9.8: risultati dei run del 18/11 sera con la rete corretta (bilancio di portata, nodi, validazione GNSS, confronto dei moduli, verifica di $z_{DTM}$ alla sezione 170). §9.4: chiusi i punti 6 e 7, aggiornati 1, 2, 4, 8, 10, 11, 13; nuovi punti 14 (parità nel test del segno) e 15 (trasporto al volo nullo). Nota in testa alla §9.5 e verifica in §9.6. |
+| 19/11/2026 | Tolta la §8 "Domande per Carlo": le domande aperte sono in `docs/Domande_per_Carlo.md`. Aggiunte la §9.9 (dati ADCP nella validazione, sottostazioni di s003 e s007) e in §9.1 il calcolo della larghezza bankfull al nodo verificato sul codice. §9.4: aggiornati i punti 5, 9 e 10. Codice: `read_field_points.m` (nuova), `validation_gnss_mean.m`, `station_reach_class.m`, `gnss_cross_section_profiles.m`, i tre script principali e il config (`adcp_file`, `adcp_min_spacing`, `gnss_station_split`). |
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
 | 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |

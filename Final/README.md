@@ -9,7 +9,7 @@ Self-contained version of the workflow that reads every input from `Input_folder
 | `Input_folder/config_ORCO_2025.m` | All parameters (flips, forced bifurcations, Q, n, sediment and node parameters, ...) |
 | `centerline_from_mask.m`, `calculate_widths.m`, `skeleton_coords.m`, `crop_to_mask.m` | Functions of the pre-processing |
 | `W_bankfull_from_dtm.m`, `G_zi.m` | Functions of the morphodynamic module (bankfull width on the DTM, Wilcock & Crowe transport function) |
-| `validation_gnss_mean.m` | GNSS validation of a corrected DTM |
+| `read_field_points.m`, `validation_gnss_mean.m` | Field points (GNSS cross-sections by wading + ADCP transects, cross-sections on two segments split into sub-stations) and their validation against a corrected DTM |
 | `exclude_no_flow_pixels.m` | Removes the wet pixels of the segments without discharge (`no_flow_segments`) from the corrected area; used by both modules |
 | `ModuleComparison.m` | Comparison of the two modules: water balance of the discharge, GNSS statistics by reach type, map of DTM_MM - DTM_HM, cross-section profiles |
 | `check_discharge_conservation.m`, `station_reach_class.m`, `compare_modules_gnss.m`, `dtm_difference_map.m`, `gnss_cross_section_profiles.m` | Functions of `ModuleComparison.m` |

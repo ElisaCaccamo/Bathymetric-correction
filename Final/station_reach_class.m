@@ -1,4 +1,4 @@
-function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecessor, bif_info, conf_info, network_root, topo_order, no_flow_segments)
+function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecessor, bif_info, conf_info, network_root, topo_order, no_flow_segments, forced)
 % STATION_REACH_CLASS  Assign every GNSS station to a river segment and to a
 % reach type of the network.
 %
@@ -41,12 +41,21 @@ function S = station_reach_class(Tpts, all_centerlines, sections_ids, predecesso
 %   network_root     segment index of the network head
 %   topo_order       segment indices in topological order (upstream first)
 %   no_flow_segments (optional) codes of the segments without discharge at the flight
+%   forced           (optional) table Station, segment_code (second output of
+%                    read_field_points): sub-stations of the cross-sections that
+%                    cross more than one segment, assigned by hand. Their segment
+%                    is the given one instead of the majority of the points, and
+%                    they are not flagged as ambiguous (manual = true).
 %
 % OUTPUT
 %   S  table, one row per station, sorted along the network (topological
 %      order of the segments, then section ID)
 
 if nargin < 9, no_flow_segments = []; end
+if nargin < 10 || isempty(forced)
+    forced = table(strings(0,1), zeros(0,1), 'VariableNames', {'Station','segment_code'});
+end
+forced_st = string(forced.Station);
 N = size(all_centerlines, 1);
 assert(isequal(all_centerlines(:,1), (1:N)'), 'Section IDs must coincide with the row indices 1..N.');
 cx = all_centerlines(:,2);
@@ -125,6 +134,8 @@ seg_main = zeros(ns,1); seg_code = nan(ns,1); row_ref = zeros(ns,1);
 share_main = nan(ns,1); dist_axis = nan(ns,1); dist_other = nan(ns,1);
 s_from_node = nan(ns,1); flow_fraction = nan(ns,1); reach_class = cell(ns,1);
 ord = zeros(ns, 2);
+manual = false(ns, 1);
+seg_codes = all_centerlines(sections_ids(:,1), 6);   % code of each segment index
 for k = 1:ns
     sel = find(keep & strcmp(st_all, stations{k}));
     segs = seg_of_row(nearest_row(sel));
@@ -132,6 +143,17 @@ for k = 1:ns
     cnt = arrayfun(@(u) nnz(segs == u), useg);
     [cmax, im] = max(cnt);
     s_main = useg(im);
+    kf = find(forced_st == string(stations{k}), 1);
+    if ~isempty(kf)
+        s_forced = find(seg_codes == forced.segment_code(kf), 1);
+        if isempty(s_forced)
+            warning('Station %s: segment %d of the manual assignment not found.', stations{k}, forced.segment_code(kf));
+        else
+            s_main = s_forced;
+            cmax = nnz(segs == s_main);
+            manual(k) = true;
+        end
+    end
     xc = mean(X(sel));  yc = mean(Y(sel));
     r_seg = (sections_ids(s_main,1):sections_ids(s_main,2))';
     [d2, kk] = min((cx(r_seg) - xc).^2 + (cy(r_seg) - yc).^2);
@@ -154,10 +176,10 @@ for k = 1:ns
 end
 
 [~, io] = sortrows(ord);
-ambiguous = share_main < 1;
+ambiguous = share_main < 1 & ~manual;
 S = table(stations(io), n_points(io), Xc(io), Yc(io), seg_main(io), seg_code(io), row_ref(io), ...
-    share_main(io), ambiguous(io), dist_axis(io), dist_other(io), s_from_node(io), ...
+    share_main(io), ambiguous(io), manual(io), dist_axis(io), dist_other(io), s_from_node(io), ...
     flow_fraction(io), reach_class(io), ...
     'VariableNames', {'Station','n_points','X','Y','segment','segment_code','section_ID', ...
-    'share_main','ambiguous','dist_axis','dist_other','s_from_node','flow_fraction','reach_class'});
+    'share_main','ambiguous','manual','dist_axis','dist_other','s_from_node','flow_fraction','reach_class'});
 end

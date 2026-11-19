@@ -1061,7 +1061,9 @@ geotiffwrite(fullfile(out_morpho, sprintf('MM_DTM_corrected_%s.tif', run_tag)), 
 geotiffwrite(fullfile(out_morpho, sprintf('MM_DoD_%s.tif', run_tag)), DoD_morpho, R_dtm, 'CoordRefSysCode', crs_code);
 
 %% 8. Validation against the GNSS points
-[Tstats, Tpts] = validation_gnss_mean(fullfile(input_dir, gnss_file), raster_dtm, ...
+field_pts = read_field_points(fullfile(input_dir, gnss_file), fullfile(input_dir, adcp_file), ...
+    gnss_station_split, adcp_min_spacing);   % GNSS cross-sections + ADCP transects
+[Tstats, Tpts] = validation_gnss_mean(field_pts, raster_dtm, ...
     raster_dtm_corrected_morpho, R_dtm, mask_extended, out_val)
 
 disp('Morphodynamic module: all outputs saved in Output_folder.');

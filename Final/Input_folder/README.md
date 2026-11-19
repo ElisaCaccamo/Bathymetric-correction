@@ -10,6 +10,7 @@ File names and parameters are set in `config_ORCO_2025.m`.
 | `DTM/` | Full LiDAR DTM, 50 cm, UTM32N ETRF2000 | `cutDTM_50cm_ORCO_UTM32N_ETRF2000.tif` |
 | `WetArea_mask/` | Wet area mask on the same grid as the DTM | `I_wetarea_2025.tif` |
 | `GNSS/` | GNSS bed points of 07/03/2025 (`NomePunto, Y, X, Quota ellissoidica, Quota ortometrica`) | `punti_bat.csv` |
+| `GNSS/` | ADCP bed points of 07/03/2025, 8 transects (`N_UTM32N, E_UTM32N, Z_BOTTOM`, ellipsoidal elevation; a 4th field on the first row of each transect) | `punti_bat_ADCP.csv` |
 
 `DTM_segments/` and `Mask_segments/` must contain the same number of files, with the same codes:
 the i-th DTM is paired with the i-th mask (alphabetical order).

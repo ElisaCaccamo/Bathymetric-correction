@@ -31,8 +31,17 @@ function [Tstats, Tpts] = validation_gnss_mean(gnss_path, raster_dtm, raster_dtm
 %   e > 0  ->  model ABOVE the mean GNSS elevation
 %   e < 0  ->  model BELOW the mean GNSS elevation
 %
+% FIELD DATA. GNSS cross-sections surveyed by wading and ADCP transects are
+% treated in the same way: each is a "station" compared with its mean bed
+% elevation. The table of points comes from read_field_points (ADCP
+% transects as stations aNN, GNSS cross-sections that cross more than one
+% segment split into sub-stations sNNN_tCC).
+%
 % INPUTS
-%   gnss_path              csv with columns: "NomePunto, Y, X, Quota ellissoidica, Quota ortometrica"
+%   gnss_path              table of read_field_points (PointName, Station, X, Y,
+%                          z_ell, z_ort, source), or the path of the GNSS csv
+%                          ("NomePunto, Y, X, Quota ellissoidica, Quota ortometrica"):
+%                          in that case only the GNSS points, without splits
 %   raster_dtm             original DTM (double, NaN at nodata)
 %   raster_dtm_corrected   bathymetry-corrected DTM (same grid)
 %   R_dtm                  DTM spatial reference (MapCellsReference)
@@ -48,49 +57,30 @@ function [Tstats, Tpts] = validation_gnss_mean(gnss_path, raster_dtm, raster_dtm
 % Requires MATLAB R2020a+ (VariableNamingRule, tiledlayout, exportgraphics).
 % No toolboxes beyond base MATLAB.
 
-if nargin < 6 || isempty(out_dir), out_dir = fileparts(gnss_path); end
+if nargin < 6 || isempty(out_dir)
+    if istable(gnss_path), out_dir = pwd; else, out_dir = fileparts(gnss_path); end
+end
 rng(1);   % reproducible bootstrap
 
-%% 1) Robust csv read (separator/decimal mark not guaranteed)
-opts = detectImportOptions(gnss_path, 'VariableNamingRule', 'preserve');
-T = readtable(gnss_path, opts);
-if width(T) < 5
-    error('GNSS file: expected >= 5 columns, found %d. Check the delimiter.', width(T));
+%% 1) Field points (GNSS + ADCP) and their stations
+if istable(gnss_path)
+    P = gnss_path;
+else
+    P = read_field_points(gnss_path);
 end
-
-Vraw = nan(height(T), 4);
-for k = 1:4
-    c = T{:, k+1};
-    if isnumeric(c)
-        Vraw(:, k) = double(c);
-    else
-        Vraw(:, k) = str2double(strrep(string(c), ',', '.'));   % handle comma decimal mark
-    end
-end
-name  = string(T{:, 1});
-Yg    = Vraw(:, 1);   % NB: Y precedes X in the source file
-Xg    = Vraw(:, 2);
-z_ell = Vraw(:, 3);   % each point's OWN elevation (kept for diagnostics, not used as the comparison truth)
-z_ort = Vraw(:, 4);
-
-% Safety check: in UTM 32N (Piedmont) Easting ~4e5 < Northing ~5e6
-if median(Xg, 'omitnan') > median(Yg, 'omitnan')
-    warning('X and Y look swapped relative to UTM32N expectations: swapping them back.');
-    [Xg, Yg] = deal(Yg, Xg);
-end
+name        = string(P.PointName);
+station_str = string(P.Station);
+source      = string(P.source);
+Xg    = P.X;
+Yg    = P.Y;
+z_ell = P.z_ell;   % each point's OWN elevation (kept for diagnostics, not used as the comparison truth)
+z_ort = P.z_ort;   % NaN for the ADCP points (ellipsoidal elevation only)
 
 %% 2) Station grouping and per-station MEAN ELEVATION (X,Y are not touched)
-station = regexp(name, '^(s\d+)_p\d+$', 'tokens', 'once', 'ignorecase');
-has_station = ~cellfun(@isempty, station);
-n_missing = nnz(~has_station);
-if n_missing > 0
-    fprintf('%d points without a recognisable station code ("sNNN_pMMM") excluded from validation.\n', n_missing);
-end
+has_station = strlength(station_str) > 0 & ~ismissing(station_str);
 if ~any(has_station)
-    error('No point matched the "sNNN_pMMM" station naming pattern: cannot build station means.');
+    error('No point with a station code: cannot build station means.');
 end
-station_str = strings(size(name));
-station_str(has_station) = string(cellfun(@(c) c{1}, station(has_station), 'UniformOutput', false));
 
 stations = unique(station_str(has_station));
 z_ell_station_mean = containers.Map('KeyType', 'char', 'ValueType', 'double');
@@ -123,7 +113,8 @@ end
 
 % keep only points that belong to a recognised station from here on
 keep = has_station;
-name = name(keep); Xg = Xg(keep); Yg = Yg(keep);
+name = name(keep); Xg = Xg(keep); Yg = Yg(keep); source = source(keep);
+z_ell = z_ell(keep); z_ort = z_ort(keep);
 z_ell_mean_pt = z_ell_mean_pt(keep); z_ort_mean_pt = z_ort_mean_pt(keep);
 station_str = station_str(keep);
 N_points_station = N_points_station(keep); std_within_station = std_within_station(keep);
@@ -159,15 +150,25 @@ else
     z_gnss_mean = z_ort_mean_pt;  datum = 'orthometric';
 end
 fprintf('Using %s elevation (smaller absolute offset).\n', datum);
+if strcmp(datum, 'orthometric') && any(source == "ADCP")
+    warning('Orthometric datum selected: the ADCP points (ellipsoidal elevation only) are excluded.');
+end
 if min(abs([d_ort d_ell])) > 5
     warning(['Offset > 5 m with both datums: check the DTM vertical datum/CRS (geoid), ' ...
              'point coordinates, or units.']);
 end
 
+% own elevation of every point in the selected datum (for the transverse profiles)
+if strcmp(datum, 'ellipsoidal'), z_point = z_ell; else, z_point = z_ort; end
+
 %% 5) Residuals and valid-point selection
 ok = in_grid & isfinite(z_gnss_mean) & isfinite(z_orig) & isfinite(z_corr);
 fprintf('Points in file: %d | valid: %d | off-grid/NaN: %d | inside corrected area: %d\n', ...
     numel(Xg), nnz(ok), nnz(~ok), nnz(ok & in_corr));
+for src = unique(source)'
+    fprintf('  %s: %d valid points inside the corrected area, %d stations\n', src, ...
+        nnz(ok & in_corr & source == src), numel(unique(station_str(ok & in_corr & source == src))));
+end
 
 e_corr = z_corr - z_gnss_mean;
 e_orig = z_orig - z_gnss_mean;
@@ -215,9 +216,9 @@ fprintf('(%d points above come from %d distinct stations - residuals are not ful
     nnz(ok & in_corr), n_eff_stations);
 
 %% 7) Per-point table and export
-Tpts = table(name, station_str, Xg, Yg, z_gnss_mean, z_orig, z_corr, e_orig, e_corr, ...
+Tpts = table(name, station_str, source, Xg, Yg, z_point, z_gnss_mean, z_orig, z_corr, e_orig, e_corr, ...
     z_orig - z_gnss_mean, z_orig - z_corr, in_corr, loc_std, N_points_station, std_within_station, ok, ...
-    'VariableNames', {'PointName','Station','X','Y','z_gnss_station_mean','z_dtm_orig','z_dtm_corr', ...
+    'VariableNames', {'PointName','Station','source','X','Y','z_point','z_gnss_station_mean','z_dtm_orig','z_dtm_corr', ...
     'res_orig','res_corr','DoD_observed','DoD_modelled','inside_corrected_area', ...
     'local_std_5x5','N_points_in_station','std_within_station','valid'});
 
