@@ -66,6 +66,11 @@ for i = 1:length(dtm_files)
     [river_mask, R_mask] = readgeoraster(mask_path);
 
         dtm = double(dtm);
+        % Nodata of the segment DTM (pixels outside the clipping polygon) to NaN:
+        % otherwise the bilinear interpolation in calculate_widths mixes the
+        % real elevation with -32767 near the edge of the clip and gives false
+        % but positive section elevations (e.g. 211.9 m instead of 255.5 m)
+        dtm(dtm == -32767) = NaN;
 
         % Nominal width conversion m --> pixels
     px_size_x = R_mask.CellExtentInWorldX;

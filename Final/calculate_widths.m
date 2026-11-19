@@ -68,8 +68,12 @@ function [widths, sect_x, sect_y, sect_z, z_sect_mean] = calculate_widths(x_inte
         % Interpolate elevation for each cross section point from DTM
         z_cross = interp2(x_world, y_world, dtm, x_cross(idx_start:idx_end), y_cross(idx_start:idx_end), 'linear');
         
-        % Take out negative values from mean calculation
-        z_valid = z_cross(z_cross >= 0);
+        % Mean over the valid points only: NaN (nodata of the segment DTM, and
+        % points whose bilinear stencil touches a nodata pixel) and negative
+        % values are excluded. The mean includes every point of the transect
+        % between the first and the last pixel of the segment mask (step 0.5 m),
+        % so an island or bar inside the section enters the mean.
+        z_valid = z_cross(~isnan(z_cross) & z_cross >= 0);
         
         if ~isempty(z_valid)
             z_sect_mean(i) = mean(z_valid);
