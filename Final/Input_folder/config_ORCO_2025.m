@@ -52,7 +52,7 @@ segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
 % question for Carlo (Domande_per_Carlo.md, 6).
 adcp_min_spacing = 0;
 % GNSS cross-sections that cross more than one segment: split into sub-stations
-% (sNNN_tCC), one per segment, each compared with the mean of its own points.
+% (sNNN-tCC), one per segment, each compared with the mean of its own points.
 % {station, first point, last point, segment code}; s015 still to be defined.
 gnss_station_split = {'s003',  1, 13,  9;
                       's003', 14, 21, 11;

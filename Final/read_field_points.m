@@ -17,7 +17,8 @@ function [P, forced] = read_field_points(gnss_path, adcp_path, station_split, ad
 % station_split  (optional) cell n x 4 {station, first point, last point,
 %            segment code}: GNSS cross-sections that cross more than one
 %            segment are split into sub-stations, one per segment, named
-%            "sNNN_tCC" (CC = segment code). Each sub-station is compared with
+%            "sNNN-tCC" (CC = segment code; hyphen, not underscore, so that the
+%            name is not rendered as a TeX subscript in the figures). Each sub-station is compared with
 %            the mean of its own points, and its segment is the one given here
 %            (manual assignment, see station_reach_class).
 % adcp_min_spacing  (optional, default 0) minimum distance [m] between two
@@ -69,7 +70,7 @@ new_station = station;
 for r = 1:size(station_split, 1)
     st = lower(string(station_split{r,1}));
     p1 = station_split{r,2};  p2 = station_split{r,3};  code = station_split{r,4};
-    sub = sprintf('%s_t%02d', st, code);
+    sub = sprintf('%s-t%02d', st, code);
     sel = station == st & pnum >= p1 & pnum <= p2;
     if ~any(sel)
         warning('Station split: no point of %s between p%03d and p%03d.', st, p1, p2);

@@ -254,8 +254,8 @@ h1 = plot(axA, x - 0.15, me_st(:,2), 'o', 'MarkerSize', 6.5, 'MarkerFaceColor', 
 h2 = plot(axA, x + 0.15, me_st(:,3), 'o', 'MarkerSize', 6.5, 'MarkerFaceColor', col_mm, 'MarkerEdgeColor', 'w');
 set(axA, 'XLim', [0.4 ns + 0.6], 'YLim', yl, 'XTick', x, 'XTickLabel', lab, 'FontSize', 8, 'Box', 'off', 'Layer', 'top');
 grid(axA, 'on');  set(axA, 'XGrid', 'off');
-ylabel(axA, {'DTM - GNSS station mean [m]', '> 0: DTM too high'});
-title(axA, 'A. Mean residual at each GNSS cross-section (stations in network order, upstream to downstream)', ...
+ylabel(axA, {'DTM - in situ station mean [m]', '> 0: DTM too high'});
+title(axA, 'A. Mean residual at each in situ cross-section, GNSS or ADCP (stations in network order, upstream to downstream)', ...
     'FontWeight', 'normal');
 legend(axA, [h0 h1 h2 hb], [{'raw LiDAR DTM', 'hydraulic module', 'morphodynamic module'}, class_order], ...
     'Orientation', 'horizontal', 'Location', 'northoutside', 'Box', 'off', 'FontSize', 8, 'NumColumns', 4);
@@ -276,7 +276,7 @@ plot(axB, [0.4 ns + 0.6], [0 0], '-', 'Color', ink, 'LineWidth', 0.8);
 set(axB, 'XLim', [0.4 ns + 0.6], 'YLim', ylb, 'XTick', x, 'XTickLabel', lab, 'FontSize', 8, 'Box', 'off', 'Layer', 'top');
 grid(axB, 'on');  set(axB, 'XGrid', 'off');
 ylabel(axB, {'mean bed MM - HM [cm]'});
-title(axB, 'B. Mean difference between the two corrected beds (bar colour = module with the lower RMSE: blue hydraulic, orange morphodynamic, grey tie)', ...
+title(axB, 'B. Mean difference between the two corrected beds (bar colour = module closer to the in situ measurements: blue hydraulic, orange morphodynamic, grey tie)', ...
     'FontWeight', 'normal');
 
 % --- C ---

@@ -81,7 +81,7 @@ if ~isempty(S)
 end
 xlabel(ax, 'X (UTM 32N) [m]');  ylabel(ax, 'Y (UTM 32N) [m]');
 title(ax, {'Difference between the DTMs corrected by the morphodynamic and hydraulic modules', ...
-    'bold numbers = segment codes, black dots = GNSS stations'}, 'FontWeight', 'normal');
+    'bold numbers = segment codes, black dots = in situ stations (GNSS, ADCP)'}, 'FontWeight', 'normal');
 exportgraphics(fig, fullfile(out_dir, 'DTM_difference_MM_minus_HM.png'), 'Resolution', 200);
 end
 

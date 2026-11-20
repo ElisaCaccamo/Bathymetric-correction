@@ -1160,26 +1160,52 @@ if run_diagnostics
         disp(T)
     end
 
-    tronchi_sospetti = [19 26 30 32 35 38 39];   % 12 already handled above
+    % Do the segments still oscillate? The test uses z_original, i.e. z_DTM
+    % BEFORE the isolated-glitch filter and before segments_to_smooth, so that
+    % it measures the raw signal and not the effect of the smoothing.
+    %   roughness  standard deviation of z around its moving median on 7 sections
+    %   Jump_raw   largest jump between consecutive sections
+    %   Jump_w7    largest jump after the moving median on 7 sections
+    % Outcome:
+    %   'no oscillation: smoothing not needed'   roughness < rough_tol and Jump_raw < 1 m
+    %   'oscillation: smoothing removes it'      otherwise, if Jump_w7 < 1 m
+    %   'TO BE INSPECTED MANUALLY'               otherwise
+    % (with the nodata of the segment DTMs converted to NaN, 19/11/2026, the
+    % roughness of these segments is 1-9 cm, as in the other segments)
+    rough_tol = 0.20;   % [m]
+    smooth_list = [segments_to_smooth.segment];
+    tronchi_sospetti = unique([12 19 26 30 32 35 38 39, smooth_list]);
 
-    fprintf('\n%-8s %-12s %-14s %-14s\n', 'Segment', 'Jump_before', 'Jump_w7', 'Outcome');
+    fprintf('\nSegments with suspected oscillation of z_DTM (raw z, before filter and smoothing)\n');
+    fprintf('%-8s %-10s %-11s %-10s %-9s %-14s %s\n', 'Segment', 'in_list', 'roughness', 'Jump_raw', 'Jump_w7', 'smooth_change', 'Outcome');
     for t = tronchi_sospetti
         idx_t = find(all_centerlines(:,6) == t);
         if numel(idx_t) < 7, continue; end
 
-        z0 = all_centerlines(idx_t, 4);
-        salto_prima = max(abs(diff(z0)));
-
+        z0 = z_original(idx_t);
         z_test = movmedian(z0, 7);
+        rough = std(z0 - z_test, 'omitnan');
+        salto_prima = max(abs(diff(z0)));
         salto_dopo = max(abs(diff(z_test)));
+        % effect of the smoothing actually applied (if the segment is in the list)
+        k_s = find(smooth_list == t, 1);
+        if isempty(k_s)
+            in_list = 'no';  dz_smooth = 0;
+        else
+            in_list = sprintf('yes (w=%d)', segments_to_smooth(k_s).window);
+            dz_smooth = max(abs(movmedian(z0, segments_to_smooth(k_s).window) - z0));
+        end
 
-        if salto_dopo < 1.0
-            esito = 'OK - oscillation, apply smoothing';
+        if rough < rough_tol && salto_prima < 1.0
+            esito = 'no oscillation: smoothing not needed';
+        elseif salto_dopo < 1.0
+            esito = 'oscillation: smoothing removes it';
         else
             esito = 'TO BE INSPECTED MANUALLY (other cause)';
         end
-        fprintf('%-8d %-12.2f %-14.2f %-14s\n', t, salto_prima, salto_dopo, esito);
+        fprintf('%-8d %-10s %-11.3f %-10.2f %-9.2f %-14.2f %s\n', t, in_list, rough, salto_prima, salto_dopo, dz_smooth, esito);
     end
+    fprintf('smooth_change: largest change of z produced by the moving median of segments_to_smooth [m].\n');
 
     for t = [32 35]
         idx_t = find(all_centerlines(:,6) == t);

@@ -35,7 +35,7 @@ function [Tstats, Tpts] = validation_gnss_mean(gnss_path, raster_dtm, raster_dtm
 % treated in the same way: each is a "station" compared with its mean bed
 % elevation. The table of points comes from read_field_points (ADCP
 % transects as stations aNN, GNSS cross-sections that cross more than one
-% segment split into sub-stations sNNN_tCC).
+% segment split into sub-stations sNNN-tCC).
 %
 % INPUTS
 %   gnss_path              table of read_field_points (PointName, Station, X, Y,
@@ -241,15 +241,15 @@ plot(z_gnss_mean(sel), z_orig(sel), 'o', 'Color', [0.6 0.6 0.6], 'MarkerSize', 4
 plot(z_gnss_mean(sel), z_corr(sel), 'o', 'MarkerFaceColor', [0.85 0.33 0.10], 'MarkerEdgeColor', 'none', 'MarkerSize', 5);
 lim = [min([z_gnss_mean(sel); z_orig(sel); z_corr(sel)]), max([z_gnss_mean(sel); z_orig(sel); z_corr(sel)])];
 plot(lim, lim, 'k--');
-xlabel(sprintf('GNSS station-mean elevation (%s) [m]', datum)); ylabel('Model elevation at point [m]');
+xlabel(sprintf('In situ station-mean elevation (%s) [m]', datum)); ylabel('Model elevation at point [m]');
 legend({'Original DTM', 'Corrected DTM', '1:1'}, 'Location', 'best');
-title('Elevation: model (per point) vs GNSS station mean');
+title('Elevation: model (per point) vs in situ station mean');
 
 nexttile; hold on; grid on
 histogram(e_orig(sel), 'BinWidth', 0.1, 'FaceAlpha', 0.5);
 histogram(e_corr(sel), 'BinWidth', 0.1, 'FaceAlpha', 0.5);
 xline(0, 'k-');
-xlabel('Residual = model - GNSS station mean [m]'); ylabel('Number of points');
+xlabel('Residual = model - in situ station mean [m]'); ylabel('Number of points');
 legend({'Original DTM', 'Corrected DTM'}, 'Location', 'best');
 title('Residual distribution');
 
@@ -257,7 +257,7 @@ nexttile; hold on; grid on
 mm = mean(e_corr(sel));  ss = std(e_corr(sel));
 plot((z_corr(sel) + z_gnss_mean(sel)) / 2, e_corr(sel), 'o', 'MarkerFaceColor', [0.85 0.33 0.10], 'MarkerEdgeColor', 'none');
 yline(mm, 'k-'); yline(mm + 1.96*ss, 'k--'); yline(mm - 1.96*ss, 'k--');
-xlabel('Mean of (model, GNSS station mean) [m]'); ylabel('Residual [m]');
+xlabel('Mean of (model, in situ station mean) [m]'); ylabel('Residual [m]');
 title('Bland-Altman (corrected DTM)');
 
 nexttile; hold on; axis equal; grid on
@@ -270,7 +270,7 @@ colormap(gca, cmap); caxis([-L L]); cb = colorbar; ylabel(cb, 'Residual [m]');
 xlabel('X (UTM 32N) [m]'); ylabel('Y (UTM 32N) [m]');
 title('Spatial distribution of residuals (corrected DTM)');
 
-sgtitle('GNSS validation - point-wise, compared against station-mean elevation');
+sgtitle('Validation against in situ measurements (GNSS + ADCP) - point-wise, compared against station-mean elevation');
 
 exportgraphics(fig, fullfile(out_dir, 'gnss_validation_mean.png'), 'Resolution', 200);
 end
