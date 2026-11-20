@@ -64,10 +64,6 @@ for i = 1:length(dtm_files)
 
     [dtm, R_dtm] = readgeoraster(dtm_path);
     [river_mask, R_mask] = readgeoraster(mask_path);
-    % Mask to a 0/1 double whatever the export format: a float32 mask with
-    % nodata -3.4e38 outside the polygon (e.g. I_000 of 20/11) would make
-    % sum(I) negative in centerline_from_mask and the segment would be lost
-    river_mask = double(river_mask > 0);
 
         dtm = double(dtm);
         % Nodata of the segment DTM (pixels outside the clipping polygon) to NaN:
