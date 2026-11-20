@@ -67,3 +67,24 @@ E per il peso: diradare i punti ADCP a una spaziatura simile a quella dei GNSS (
 - (b) Nessun confronto in questo paper: il multi-temporale resta uno sviluppo futuro, citato nelle conclusioni.
 
 Se (a): chi può fornire i dettagli della correzione 2019?
+
+**8. Piano dell'analisi di sensitività: parametri, intervalli e metriche.**
+
+*Contesto.* Il run di riferimento è quello del 20/11 sera: 48 stazioni GNSS, RMSE 0.30 m, errore medio +0.22 m in entrambi i moduli. La proposta è di variare un parametro alla volta attorno ai valori di riferimento, tenendo fissi tutti gli altri, per circa 25 run in tutto. Per ogni run si guardano: RMSE ed errore medio di entrambi i moduli sull'insieme di stazioni della validazione principale (vedi domande 1 e 6); la differenza di RMSE tra modulo morfodinamico e idraulico; la quota di portata $\psi$ ai nodi e il numero di nodi asimmetrici; il P95 della mappa MM − HM.
+
+| Parametro | Riferimento | Valori proposti | Motivo |
+| --- | --- | --- | --- |
+| $n$ di Manning | 0.030 | 0.025, 0.035, 0.040 | intervallo tipico dei fiumi ghiaiosi; il valore non è calibrato |
+| Portata del volo | 10.76 m³/s | ±10% (9.7, 11.8) | incertezza della scala di deflusso |
+| Passo tra le sezioni `dx` | 10 m | 5, 20 m | discretizzazione |
+| Soglia dei salti isolati `glitch_tol` | 0.20 m | 0.10, 0.30 m | pre-processing di $z_{DTM}$ |
+| $\theta^*_{BF}/\theta^*_c$ (`bankfull_factor`) | 1.62 | 1.2, 2.0 | fonte non documentata (domanda 2) |
+| $\theta^*_c$ | 0.030 | 0.045 | soglia di moto |
+| Coefficiente di Ikeda $r$ | 0.65 | 0.4, 0.9 | flusso laterale al nodo |
+| Lunghezza delle celle $\alpha$ | 4 | 2, 6 | modello a due celle |
+| Larghezza al nodo | bankfull dal DTM | maschera al volo | già provato il 18/11 (§9.3) |
+| Finestra della pendenza al nodo `L_node` | 400 m | 200, 800 m | pendenza ai nodi |
+| Soglia minima della pendenza al nodo `S_floor_prctile` | 0.05 | 0.10 | comprende il nodo di testa 13 (deciso il 20/11: soglia minima, dichiarata come limite) |
+| Regola di scelta della soluzione | più vicina a $\psi_{hyd}$ | alternative della domanda 4 | equilibri multipli |
+
+*Domanda.* Approvi parametri, intervalli e metriche? Ci sono parametri da aggiungere o da togliere? Basta variare un parametro alla volta, oppure servono combinazioni (per esempio $n$ insieme alla portata, che agiscono entrambe sul tirante)?
