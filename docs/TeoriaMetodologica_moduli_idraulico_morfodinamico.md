@@ -2,7 +2,7 @@
 
 **Elisa Caccamo** · 8 ottobre 2026
 
-> Versione Markdown del file `TeoriaMetodologica_moduli_idraulico_morfodinamico.docx`. Le equazioni sono state ricostruite in LaTeX a partire dal testo estratto; la figura del §4.3 è stata reinserita il 20/11/2026 (`docs/fig/nodo_sezione_rettangolarizzata.png`).
+> Versione Markdown del file `TeoriaMetodologica_moduli_idraulico_morfodinamico.docx`. Le equazioni sono state ricostruite in LaTeX a partire dal testo estratto; la figura del §4.3 è stata reinserita il 20/11/2026 (`docs/fig/nodi.png`, sorgente LaTeX `docs/fig/nodi.tex`).
 
 ---
 
@@ -79,7 +79,7 @@ Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i pun
 - **I due moduli non sono distinguibili:** differenza di RMSE +0.4 cm [−0.1, +0.9]; MM più vicino in 3 stazioni, HM in 8, 37 pari (p ≈ 0.23). Differiscono solo nelle 11 stazioni dei tratti a canali multipli.
 - **$z_{DTM}$ resta l'errore dominante:** confermata alla sezione 170 la causa 1 della §9.6 (nodata −32767 dei DTM di segmento non convertito), con il filtro sui salti che sposta l'errore sulle sezioni sane. Correzione in attesa di decisione.
 - **Corretto `compare_modules_gnss.m`:** il test del segno esclude le parità (|ΔRMSE| ≤ 1 mm, parametro `tie_tol`); la tabella delle stazioni riporta sia la differenza di RMSE sia quella dell'errore medio. Il resoconto del run contava come "MM più vicino" le stazioni con fondo MM più basso: i numeri corretti sono 3 contro 8 (punto 14 della §9.4). Va rilanciato `ModuleComparison`.
-- **Domande per Carlo:** in un file a parte, `docs/Domande_per_Carlo.md` (classi delle stazioni, $\theta^*_{BF}$, portata bankfull, regola di scelta, ruolo del trasporto al volo, densità dei punti ADCP). La vecchia §8 è stata tolta da questo documento.
+- **Domande per Carlo:** in un file a parte, `docs/Domande_per_Carlo.md` (classi delle stazioni, $`\theta^*_{BF}`$, portata bankfull, regola di scelta, ruolo del trasporto al volo, densità dei punti ADCP). La vecchia §8 è stata tolta da questo documento.
 - **Dati ADCP nella validazione:** gli 8 transetti ADCP del 07/03/2025 entrano come stazioni a01–a08, senza distinzione dalle sezioni GNSS; quota ellissoidica verificata. Le sezioni GNSS s003 e s007, che attraversano più tratti, sono divise in sottostazioni assegnate a mano (s015 da definire). Nuova funzione `read_field_points.m` (§9.9). La densità dei punti ADCP resta in sospeso fino alla risposta di Carlo.
 - **Correzione di $z_{DTM}$, primo passo (deciso il 19/11):** si tiene l'approccio attuale e si corregge solo il nodata. In `Preprocessing_HydraulicModule.m` il nodata −32767 dei DTM di segmento diventa NaN alla lettura; in `calculate_widths.m` la media della sezione esclude esplicitamente i NaN. Da rilanciare il pre-processing e guardare i risultati (salti segnalati dal filtro, oscillazioni dei tratti di `segments_to_smooth`, $z_{DTM}$ contro il DTM completo a s006, s019, s020) prima di decidere sul profilo monotono (§9.6).
 - **Prossimi passi:** rilanciare i tre script (pre-processing, modulo morfodinamico, `ModuleComparison`) con la correzione del nodata, i dati ADCP e le sottostazioni; definire la divisione di s015; decidere come presentare il contributo del modulo morfodinamico nel paper.
@@ -114,8 +114,8 @@ In entrambi i moduli il calcolo procede da monte verso valle e ogni sezione vien
 | $\psi_{hyd}$ | quota di portata del ramo 1 nel modulo idraulico al volo, $Q_1^{hyd}/Q_0$, usata come riferimento per scegliere tra le soluzioni asimmetriche (§9.1) | – |
 | $\psi_x$ | quota del flusso solido della classe $x$ (C o F) che va nel ramo 1, $Q_{s1,x}/Q_{s0,x}$ | – |
 | $\beta$ | rapporto di forma della madre in condizioni bankfull, $\beta=W_0^{bf}/(2D_0)$ (semilarghezza su tirante). Sotto un valore critico (≈ 12–13 con rami uguali) il nodo ha solo la soluzione bilanciata; sopra compaiono due soluzioni asimmetriche e la bilanciata diventa instabile (Bolla Pittaluga et al., 2003) | – |
-| $\theta^*_c$, $\theta^*_{BF}$ | numero di Shields critico (0.03) e bankfull ($1.62\,\theta^*_c$), riferiti a $d_{50}$ | – |
-| $\theta_{bf}/\theta^*_c$ | Shields bankfull effettivo della madre diviso per quello critico, con $\theta_{bf}=D_0 S_0/(\Delta d_{50})$. Dice quale limite fissa $D_0$ (§9.1): 1.62 = tirante di Shields pieno $D_S$; 1.00 = tirante critico $D_c$ (sponde basse); valori intermedi = livello di sfioro del transetto | – |
+| $`\theta^*_c`$, $`\theta^*_{BF}`$ | numero di Shields critico (0.03) e bankfull ($`1.62\,\theta^*_c`$), riferiti a $d_{50}$ | – |
+| $`\theta_{bf}/\theta^*_c`$ | Shields bankfull effettivo della madre diviso per quello critico, con $\theta_{bf}=D_0 S_0/(\Delta d_{50})$. Dice quale limite fissa $D_0$ (§9.1): 1.62 = tirante di Shields pieno $D_S$; 1.00 = tirante critico $D_c$ (sponde basse); valori intermedi = livello di sfioro del transetto | – |
 
 ---
 
@@ -125,11 +125,11 @@ Entrambi i moduli partono dalla stessa rappresentazione della rete, costruita un
 
 - **Geometria.** Per ogni poligono di canale singolo si estrae la centerline (RivMAP, `centerline_from_mask`), la si ricampiona ogni $dx=10$ m e si traccia la sezione ortogonale. La larghezza $W$ è la distanza tra il primo e l'ultimo punto della sezione che cadono nella maschera binaria.
 
-- **Pendenza.** $S$ è costante per tratto e si ricava nel pre-processing dalla quota del DTM lungo la centerline (quota media di sezione, dopo la rimozione degli outlier): si interpola $z(s)$ con una retta ai minimi quadrati, $z=a\,s+b$, dove $s$ è l'ascissa curvilinea lungo la centerline, e si pone $S=\max\left(1.6\cdot10^{-4},\,-a\right)$. Ai tratti con un solo punto si assegna $S=1.6\cdot10^{-4}$. Le pendenze sono calcolate una sola volta e usate da entrambi i moduli.
+- **Pendenza.** $S$ è costante per tratto e si ricava nel pre-processing dalla quota del DTM lungo la centerline (quota media di sezione, dopo la rimozione degli outlier): si interpola $z(s)$ con una retta ai minimi quadrati, $`z=a\,s+b`$, dove $s$ è l'ascissa curvilinea lungo la centerline, e si pone $`S=\max\left(1.6\cdot10^{-4},\,-a\right)`$. Ai tratti con un solo punto si assegna $S=1.6\cdot10^{-4}$. Le pendenze sono calcolate una sola volta e usate da entrambi i moduli.
 
 - **Topologia.** Due tratti sono connessi se la distanza tra la fine dell'uno e l'inizio dell'altro è inferiore a una soglia di distanza prefissata. La matrice antisimmetrica $a_{ij}$ vale $+1$ se il tratto $j$ alimenta il tratto $i$ e $-1$ nella posizione simmetrica.
 
-- **Classificazione.** Righe e colonne della matrice sono gli ID di inizio e di fine di ogni tratto. Se la fine del tratto $j$ è vicina all'inizio del tratto $i$, $a_{\text{fine}_j,\,\text{inizio}_i}=+1$ e $a_{\text{inizio}_i,\,\text{fine}_j}=-1$. Una colonna di **inizio** con più di un $+1$ indica una sezione che riceve acqua da più tratti (le righe): è una **confluenza** (`conf_info`). Una colonna di **fine** con più di un $-1$ indica una sezione che alimenta più tratti: è una **biforcazione** (`bif_info`). Tutte le altre sezioni sono **canale singolo**.
+- **Classificazione.** Righe e colonne della matrice sono gli ID di inizio e di fine di ogni tratto. Se la fine del tratto $j$ è vicina all'inizio del tratto $i$, $`a_{\text{fine}_j,\,\text{inizio}_i}=+1`$ e $`a_{\text{inizio}_i,\,\text{fine}_j}=-1`$. Una colonna di **inizio** con più di un $+1$ indica una sezione che riceve acqua da più tratti (le righe): è una **confluenza** (`conf_info`). Una colonna di **fine** con più di un $-1$ indica una sezione che alimenta più tratti: è una **biforcazione** (`bif_info`). Tutte le altre sezioni sono **canale singolo**.
 
 La portata di monte proviene dalle stazioni idrometriche (Spineto, San Benigno) ed è l'unica condizione al contorno idraulica. Il risultato di ogni modulo è la quota $\eta=z_{DTM}-h$ su ogni sezione; le quote sono poi interpolate (scattered interpolant) sulla griglia del DTM e si produce la mappa delle differenze (DoD).
 
@@ -139,46 +139,39 @@ La portata di monte proviene dalle stazioni idrometriche (Spineto, San Benigno) 
 
 Il modulo idraulico ricava il tirante $h$ di ogni sezione rettangolare dal moto uniforme di Manning (forma di Gauckler–Strickler, $k_s=1/n$, $n=0.03$ costante) con la portata liquida propagata da monte, e pone $\eta=z_{DTM}-h$. Il coefficiente di Chézy non compare: è legato a $n$ da $C=R^{1/6}/n$ (con $R\approx h$ per sezione larga), quindi con $n$ costante $C$ cresce con il tirante (con $n=0.03$: $C\approx30$ m$^{1/2}$/s per $h=0.5$ m, $\approx36$ m$^{1/2}$/s per $h=1.5$ m). Non c'è trasporto solido: l'unico vincolo di rete è la conservazione della portata liquida, più la continuità dell'energia nei nodi di biforcazione.
 
-$$
+```math
 \eta = z_{DTM} - h
-$$
-
+```
 ### 3.1 Canale singolo
 
 In ogni sezione la portata $Q$ nota da monte viene inserita nella legge di moto uniforme per una sezione rettangolare larga (raggio idraulico $\approx h$). Con Gauckler–Strickler ($k_s=1/n$):
 
-$$
+```math
 Q = W\,h\,k_s h^{1/6}\sqrt{h\,S} = W\,k_s\sqrt{S}\,h^{5/3}
 \quad\Longrightarrow\quad
 h = \left(\frac{Q\,n}{W\sqrt{S}}\right)^{3/5}
-$$
-
+```
 La portata resta invariata e passa alla sezione successiva. Poiché $S$ e $k_s=1/n$, con $n$ di Manning costante, sono costanti nel tratto, tra due sezioni consecutive dello stesso canale vale $W_1h_1^{5/3}=W_2h_2^{5/3}$: il tirante varia solo con la larghezza.
 
-$$
+```math
 h_2 = \left(\frac{W_1}{W_2}\right)^{3/5} h_1
-$$
-
+```
 ### 3.2 Nodo di biforcazione
 
 Nella sezione madre la portata $Q_0$ è nota; vanno determinate la ripartizione $Q_1$, $Q_2$ e i tiranti $h_1$, $h_2$ dei rami figli. Il sistema ha 4 equazioni in 4 incognite ($h_1$, $h_2$, $Q_1$, $Q_2$): moto uniforme in ciascun ramo, conservazione della portata al nodo e uguaglianza dell'energia specifica all'imbocco dei due rami (Bernoulli, perdite trascurate).
 
-$$
+```math
 h_1 = \left(\frac{Q_1\,n}{W_1\sqrt{S_1}}\right)^{3/5} \tag{1}
-$$
-
-$$
+```
+```math
 h_2 = \left(\frac{Q_2\,n}{W_2\sqrt{S_2}}\right)^{3/5} \tag{2}
-$$
-
-$$
+```
+```math
 Q_0 = Q_1 + Q_2 \tag{3}
-$$
-
-$$
+```
+```math
 h_1 + \frac{Q_1^2}{2g\,W_1^2h_1^2} = h_2 + \frac{Q_2^2}{2g\,W_2^2h_2^2} \tag{4}
-$$
-
+```
 Il sistema è non lineare e si risolve numericamente; ne seguono $\eta_1=z_{DTM,1}-h_1$ e $\eta_2=z_{DTM,2}-h_2$. La ripartizione è governata solo da geometria ($W$, $S$) e scabrezza: la quota del fondo non entra come incognita, perché è una conseguenza del tirante.
 
 Se il sistema non ha soluzione fisica, la portata viene ripartita in proporzione alle larghezze dei rami.
@@ -197,46 +190,41 @@ Il modulo morfodinamico impone che la rete sia in equilibrio: in ogni ramo il tr
 
 La superficie del letto è una miscela di due classi, grossolana (C) e fine (F), con frazioni $f_C$ e $f_F=1-f_C$. Si usa la scala sedimentologica $\phi$ e il diametro medio geometrico $d_g$, con $d_{ref}=1$ mm:
 
-$$
+```math
 \phi = -\log_2 d\,[\text{mm}], \qquad
 \phi_m = f_C\,\phi_C + f_F\,\phi_F, \qquad
 d_g = d_{ref}\,2^{-\phi_m}
-$$
-
+```
 **Dati di campo.** La miscela di riferimento è la media delle due curve granulometriche rilevate il 28/02/2019 (Pratoregio) e il 18/03/2019 (meandro di San Benigno). La soglia tra le classi è 2 mm: le frazioni $f_{0F}$ e $f_{0C}$ del canale di monte e i diametri rappresentativi $d_F$ e $d_C$ derivano da queste curve, e $d_{50}$ si ottiene per interpolazione della curva media. $d_{50}$ si usa solo per il tirante bankfull (§4.3); tutte le grandezze di trasporto usano $d_g$.
 
 I diametri rappresentativi delle classi sono medie geometriche in scala $\phi$: ogni intervallo tra due setacci è rappresentato dal suo punto medio $\phi_k$, e la classe grossolana dalla media pesata sulle frazioni $f_k$. La classe fine, priva di setaccio inferiore, è rappresentata da $d_F=1$ mm.
 
-$$
+```math
 \phi_k = -\log_2\sqrt{d_{k-1}\,d_k}, \qquad
 d_C = 2^{-\sum_k f_k\,\phi_k / f_C}, \qquad
 d_F = 1\ \text{mm}
-$$
-
+```
 ### 4.2 Trasporto frazionario (Wilcock & Crowe, 2003)
 
 Il trasporto per unità di larghezza della classe di diametro $d$ dipende dallo sforzo al fondo e da una funzione di trasporto che include l'effetto di nascondimento (hiding):
 
-$$
+```math
 q_s(\phi) = \frac{(\tau/\rho)^{3/2}}{g\,\Delta}\,G(\zeta), \qquad
 \zeta = g_{hr}\,\frac{\theta_g}{\theta_r}, \qquad
 \theta_g = \frac{\tau}{\rho\,g\,\Delta\,d_g}
-$$
-
-$$
+```
+```math
 G(\zeta) =
 \begin{cases}
 0.002\,\zeta^{7.5} & \zeta < 1.35 \\[4pt]
 14.2\left(1 - \dfrac{0.894}{\zeta^{0.5}}\right)^{4.5} & \zeta \ge 1.35
 \end{cases}
-$$
-
-$$
+```
+```math
 g_{hr} = \left(\frac{d}{d_g}\right)^{-b}, \qquad
 b = \frac{0.67}{1 + \exp\left(1.5 - d/d_g\right)}
-$$
-
-$\theta_r=0.036$ (miscela ghiaiosa senza sabbia significativa) e $\Delta=1.65$. Lo sforzo al fondo in moto uniforme è $\tau=\rho g D S$. Il numero di Shields $\theta_g$ è uno solo per la miscela, calcolato su $d_g$ e comprensivo di $\Delta$; la dipendenza dalla singola classe entra soltanto tramite $g_{hr}$. Il trasporto della classe $x$ sulla superficie del letto è $f_x\,q_{sx}$.
+```
+$\theta_r=0.036$ (miscela ghiaiosa senza sabbia significativa) e $\Delta=1.65$. Lo sforzo al fondo in moto uniforme è $\tau=\rho g D S$. Il numero di Shields $\theta_g$ è uno solo per la miscela, calcolato su $d_g$ e comprensivo di $\Delta$; la dipendenza dalla singola classe entra soltanto tramite $g_{hr}$. Il trasporto della classe $x$ sulla superficie del letto è $`f_x\,q_{sx}`$.
 
 Il diametro medio geometrico $d_g$ è calcolato con la composizione della superficie del tratto considerato ($f_F$, $f_C$) e quindi varia da ramo a ramo.
 
@@ -244,55 +232,49 @@ Il diametro medio geometrico $d_g$ è calcolato con la composizione della superf
 
 Il trasporto viene valutato in condizioni di piena a rive piene, perché a portate ordinarie il sedimento grossolano è quasi immobile e il sistema non avrebbe soluzione significativa. Il tirante bankfull del canale madre si ricava fissando il numero di Shields bankfull come multiplo di quello critico:
 
-$$
+```math
 \theta^*_{BF} = 1.62\,\theta^*_c, \quad \theta^*_c = 0.03
 \quad\Longrightarrow\quad
 D_0 = \frac{\theta^*_{BF}\,\Delta\,d_{50}}{S_0}
-$$
-
-Il coefficiente 1.62 è quello adottato per fiumi ghiaiosi a canale singolo, con $\theta^*_c=0.03$ e $d_{50}$ dalla curva granulometrica media. Lo stesso criterio fornisce il tirante bankfull di ciascun ramo figlio.
+```
+Il coefficiente 1.62 è quello adottato per fiumi ghiaiosi a canale singolo, con $`\theta^*_c=0.03`$ e $d_{50}$ dalla curva granulometrica media. Lo stesso criterio fornisce il tirante bankfull di ciascun ramo figlio.
 
 Con $D_0$ si ricava la larghezza bankfull $W_0^{bf}$ dal DTM corretto, nel quale l'area bagnata contiene il fondo ricostruito dal modulo idraulico. Lungo il transetto ortogonale alla centerline (direzione calcolata solo con i punti dello stesso tratto) si individuano le sponde come intersezioni del profilo con il livello $\eta_0+D_0$, si integra l'area $A_0$ tra le sponde e si definisce la larghezza rettangolare equivalente. La portata bankfull segue da Manning:
 
-$$
+```math
 W_0^{bf} = \frac{A_0}{D_0}, \qquad
 Q_0^{bf} = \frac{W_0^{bf}\,D_0^{5/3}\sqrt{S_0}}{n}
-$$
-
+```
 Se il livello bankfull $\eta_0+D_0$ non è contenuto entro il transetto (il terreno non lo raggiunge su nessuno dei due lati), le sponde e l'area si calcolano al livello massimo del profilo e la larghezza equivalente è $A_0$ divisa per la profondità a quel livello. È un'approssimazione, che tende a sottostimare la larghezza bankfull.
 
 La larghezza bankfull non può essere minore di quella bagnata osservata il giorno del volo: se $W^{bf}<W^m$ si pone $W^{bf}=W^m$. In tal caso il rapporto $W_0^m/W_0^{bf}$ usato per tornare alle condizioni del volo vale 1. Lo stesso criterio si applica alle larghezze bankfull dei rami, prima della riscalatura su $W_0$.
 
 Per ciascun ramo figlio si calcola con lo stesso criterio il tirante $D_{i,s}$, con la pendenza $S_i$ del ramo, e con esso la larghezza bankfull $W_i^{bf}$ dal DTM corretto. $D_{i,s}$ serve solo a definire la geometria: i tiranti del nodo $D_1$, $D_2$ sono incognite del sistema (§5.2). Per rispettare la chiusura del nodo $W_0=W_1+W_2$, le larghezze dei rami si riscalano conservando il loro rapporto:
 
-$$
+```math
 D_{i,s} = \frac{\theta^*_{BF}\,\Delta\,d_{50}}{S_i}, \qquad
 W_i = W_0^{bf}\,\frac{W_i^{bf}}{W_1^{bf} + W_2^{bf}}
-$$
+```
+**Ritorno alle condizioni del volo.** Il nodo fornisce la ripartizione bankfull $\psi$. Le portate reali dei rami sono $`\psi\,Q_0`$ e $`(1-\psi)\,Q_0`$, con $Q_0$ la portata della madre al momento del volo; la conservazione al nodo è esatta per costruzione. Per i sedimenti si usa la stessa regola per ciascuna classe $x$:
 
-**Ritorno alle condizioni del volo.** Il nodo fornisce la ripartizione bankfull $\psi$. Le portate reali dei rami sono $\psi\,Q_0$ e $(1-\psi)\,Q_0$, con $Q_0$ la portata della madre al momento del volo; la conservazione al nodo è esatta per costruzione. Per i sedimenti si usa la stessa regola per ciascuna classe $x$:
-
-$$
+```math
 \psi = \frac{Q_1^{bf}}{Q_0^{bf}} = \frac{q_1W_1}{q_0W_0}, \qquad
 Q_1 = \psi\,Q_0, \qquad
 Q_2 = (1-\psi)\,Q_0
-$$
-
-$$
+```
+```math
 \psi_x = \frac{f_{1x}\,q_{s1x}\,W_1}{f_{0x}\,q_{s0x}\,W_0}, \qquad
 Q_{s1,x} = \psi_x\,Q_{s0,x}, \qquad
 Q_{s2,x} = Q_{s0,x} - Q_{s1,x}
-$$
-
+```
 Le larghezze reali dei rami si riducono tutte dello stesso fattore, così la configurazione del volo resta geometricamente simile a quella bankfull su cui sono calcolati $\psi$ e $\eta_i$:
 
-$$
+```math
 W_{i,\text{reale}} = W_i\,\frac{W_0^m}{W_0^{bf}}
-$$
-
+```
 Le larghezze dei rami nella sezione di imbocco possono quindi differire da quelle delle maschere, che vicino al nodo separano male i due rami; più a valle i rami usano la larghezza osservata. Il fondo dei rami resta la quota $\eta_i$ del nodo (non dipende dalla portata) e il tirante reale all'imbocco è $D_i=z_{DTM,i}-\eta_i$. Più a valle nei rami vale la logica del canale singolo ($Q_i$ costante, $D$ dal moto uniforme, $\eta=z_{DTM}-D$).
 
-![Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo](fig/nodo_sezione_rettangolarizzata.png)
+![Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo](fig/nodi.png)
 
 *Figura – Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo.*
 
@@ -304,20 +286,18 @@ Il pannello a mostra come la sezione madre diventa un rettangolo di pari area $A
 
 A monte della biforcazione, su una lunghezza $\alpha W_0$ ($\alpha=4$), il canale madre è diviso in due celle. Il flusso laterale di sedimento tra le celle $q_{sy}$ ha due componenti: il trasporto per la deviazione della corrente ($q_y$) e il richiamo gravitativo lungo la pendenza trasversale, governato dal coefficiente di Ikeda $r$:
 
-$$
+```math
 q_{sy,x} = q_{s0,x}\left[\frac{q_y}{q_0} - \frac{r}{\sqrt{\theta_{g0}\,l_{hr,x}}}\,\frac{\eta_1 - \eta_2}{W_0/2}\right]
-$$
+```
+Valori adottati: $\alpha=4$ (Ragno et al., 2021, 2023), $r=0.65$ (intervallo 0.3–1; Ikeda, 1982; Talmon et al., 1995). Per $l_{hr}$ si adotta la "grain independence", $l_{hr,x}=d_{g0}/d_x$, per cui $`\theta_{g0}\,l_{hr,x}=\tau/(\rho g\Delta d_x)`$ è il numero di Shields della singola classe: la pendenza trasversale agisce di più sulla classe grossolana, meno mobile. $\theta_{g0}$ è il numero di Shields bankfull del canale madre, con $d_{g0}$ calcolato con la composizione del tratto madre:
 
-Valori adottati: $\alpha=4$ (Ragno et al., 2021, 2023), $r=0.65$ (intervallo 0.3–1; Ikeda, 1982; Talmon et al., 1995). Per $l_{hr}$ si adotta la "grain independence", $l_{hr,x}=d_{g0}/d_x$, per cui $\theta_{g0}\,l_{hr,x}=\tau/(\rho g\Delta d_x)$ è il numero di Shields della singola classe: la pendenza trasversale agisce di più sulla classe grossolana, meno mobile. $\theta_{g0}$ è il numero di Shields bankfull del canale madre, con $d_{g0}$ calcolato con la composizione del tratto madre:
-
-$$
+```math
 \theta_{g0} = \frac{\tau_{bf0}}{\rho\,g\,\Delta\,d_{g0}}, \qquad
 \tau_{bf0} = \rho\,g\,D_0\,S_0, \qquad
 l_{hr,x} = \frac{d_{g0}}{d_x}
 \quad\Longrightarrow\quad
 \theta_{g0}\,l_{hr,x} = \frac{\tau_{bf0}}{\rho\,g\,\Delta\,d_x}
-$$
-
+```
 Il trasporto in ingresso $q_{s0x}$ è la capacità di trasporto del canale madre in condizioni bankfull, con la composizione del tratto madre: dati di campo alla testata della rete, poi quella propagata lungo la rete (§5.1, §5.4). Nel paper la biforcazione è libera e simmetrica ($W_1=W_2=W_0/2$) e il sistema si chiude con: $q_1+q_2=2q_0$, due bilanci di cella per C e F, due continuità di sedimento per C e F e quota del pelo libero uguale nei tre rami ($H_0=H_1=H_2$).
 
 ---
@@ -328,94 +308,80 @@ Il modulo morfodinamico riceve dal modulo idraulico le quote $\eta$ e i parametr
 
 ### 5.1 Canale singolo
 
-Il tirante deriva dal moto uniforme, come nel modulo idraulico. Con $D$ e $S$ si calcolano $\tau=\rho g D S$, $\theta_g$ e il trasporto frazionario $q_{sC}$, $q_{sF}$ di Wilcock & Crowe (§4.2). In equilibrio il flusso solido totale di ciascuna classe, $Q_{sx}=f_x\,q_{sx}\,W$, si conserva lungo il tratto: se la larghezza cambia, cambia il trasporto per unità di larghezza ma non il flusso totale. La portata liquida passa invariata alla sezione successiva.
+Il tirante deriva dal moto uniforme, come nel modulo idraulico. Con $D$ e $S$ si calcolano $\tau=\rho g D S$, $\theta_g$ e il trasporto frazionario $q_{sC}$, $q_{sF}$ di Wilcock & Crowe (§4.2). In equilibrio il flusso solido totale di ciascuna classe, $`Q_{sx}=f_x\,q_{sx}\,W`$, si conserva lungo il tratto: se la larghezza cambia, cambia il trasporto per unità di larghezza ma non il flusso totale. La portata liquida passa invariata alla sezione successiva.
 
-Alla testata della rete $Q_{s,x}=f_x\,q_{sx}\,W$ nella prima sezione. Nei tratti successivi $Q_{s,x}$ e la composizione $f_x$ si ereditano dal tratto a monte e restano costanti lungo il tratto; il trasporto per unità di larghezza è $q_{sx}=Q_{s,x}/W$.
+Alla testata della rete $`Q_{s,x}=f_x\,q_{sx}\,W`$ nella prima sezione. Nei tratti successivi $Q_{s,x}$ e la composizione $f_x$ si ereditano dal tratto a monte e restano costanti lungo il tratto; il trasporto per unità di larghezza è $q_{sx}=Q_{s,x}/W$.
 
 ### 5.2 Nodo di biforcazione – il sistema completo (8 equazioni)
 
 Incognite: $q_1$, $q_2$, $\eta_1$, $\eta_2$, $f_{1C}$, $f_{2C}$, $D_1$, $D_2$. Note: $q_0$, $W_0$, $W_1$, $W_2$, $\eta_0$, $D_0$, $f_{0C}$, $q_{s0x}$ e le leggi di trasporto. Per estendere il nodo BRT a rami di larghezza diversa si impone $W_0=W_1+W_2$, riscalando le larghezze bankfull dei rami (§4.3), e si usa il flusso laterale d'acqua:
 
-$$
+```math
 Q_y = \frac{1}{2}\left(Q_1 - Q_2 - Q_0\,\frac{W_1 - W_2}{W_0}\right)
-$$
+```
+**Q o q.** Le larghezze $W_0$, $W_1$, $W_2$ sono note dal DTM e diverse tra loro, quindi i bilanci al nodo (continuità liquida e solida) si scrivono in portata totale, $Q=qW$ e $`Q_{s,x}=f_x\,q_{sx}\,W`$. La portata per unità di larghezza serve solo localmente, per $\tau$, $\theta_g$ e la legge di Wilcock & Crowe. In `fsolve` conviene usare $Q_1$ come incognita e calcolare $q_1=Q_1/W_1$ dentro il residuo; le equazioni sotto restano scritte in $q$ per confronto con gli appunti.
 
-**Q o q.** Le larghezze $W_0$, $W_1$, $W_2$ sono note dal DTM e diverse tra loro, quindi i bilanci al nodo (continuità liquida e solida) si scrivono in portata totale, $Q=qW$ e $Q_{s,x}=f_x\,q_{sx}\,W$. La portata per unità di larghezza serve solo localmente, per $\tau$, $\theta_g$ e la legge di Wilcock & Crowe. In `fsolve` conviene usare $Q_1$ come incognita e calcolare $q_1=Q_1/W_1$ dentro il residuo; le equazioni sotto restano scritte in $q$ per confronto con gli appunti.
-
-$$
+```math
 q_1W_1 + q_2W_2 = q_0W_0 \tag{1 — continuità liquida}
-$$
-
-$$
+```
+```math
 \eta_1 + D_1 = \eta_2 + D_2 \tag{2 — pelo libero ramo 1 = ramo 2}
-$$
-
-$$
+```
+```math
 \eta_2 + D_2 = \eta_0 + D_0 \tag{3 — pelo libero ramo 2 = madre}
-$$
-
-$$
+```
+```math
 f_{0F}\,q_{syF} = \frac{1}{2\alpha}\left(f_{1F}\,q_{s1F}\,\frac{W_1}{W_0} - f_{2F}\,q_{s2F}\,\frac{W_2}{W_0} - f_{0F}\,q_{s0F}\,\frac{W_1 - W_2}{W_1 + W_2}\right) \tag{4}
-$$
-
-$$
+```
+```math
 f_{0C}\,q_{syC} = \frac{1}{2\alpha}\left(f_{1C}\,q_{s1C}\,\frac{W_1}{W_0} - f_{2C}\,q_{s2C}\,\frac{W_2}{W_0} - f_{0C}\,q_{s0C}\,\frac{W_1 - W_2}{W_1 + W_2}\right) \tag{5}
-$$
-
-$$
+```
+```math
 f_{1F}\,q_{s1F}\,W_1 + f_{2F}\,q_{s2F}\,W_2 = f_{0F}\,q_{s0F}\,W_0 \tag{6 — continuità solida, F}
-$$
-
-$$
+```
+```math
 f_{1C}\,q_{s1C}\,W_1 + f_{2C}\,q_{s2C}\,W_2 = f_{0C}\,q_{s0C}\,W_0 \tag{7 — continuità solida, C}
-$$
-
-$$
+```
+```math
 \frac{\eta_1 + \eta_2}{2} = \eta_0 \tag{8 — quota del nodo}
-$$
-
+```
 Le (4) e (5) sono i bilanci di cella per le classi F e C. Per $W_1=W_2=W_0/2$ le (4)–(5), combinate con (6)–(7), ricadono esattamente nelle eq. (14b–14c) di Ragno et al. L'equazione (8) non è nel paper: sostituisce un'informazione che il paper ottiene dalla pendenza dei rami e fissa la quota del nodo sulla media dei due figli.
 
 ### 5.3 Riduzione del sistema a 4 equazioni in [q₁, η₁, f₁F, f₂F]
 
 Quattro equazioni si risolvono in forma esplicita, lasciando $q_1$, $\eta_1$, $f_{1F}$ e $f_{2F}$ come incognite:
 
-$$
+```math
 q_2 = \frac{q_0W_0 - q_1W_1}{W_2}\ \ (1), \qquad
 \eta_2 = 2\eta_0 - \eta_1\ \ (8)
-$$
-
-$$
+```
+```math
 D_1 = \eta_0 + D_0 - \eta_1\ \ (2{+}3), \qquad
 D_2 = D_0 - \eta_0 + \eta_1\ \ (3)
-$$
-
+```
 **Perché 4 incognite e non 2.** Si eliminano per sostituzione solo le equazioni che non contengono trasporti solidi: (1), (8), (2)–(3). Le continuità solide (6)–(7) sono lineari in $f_{1F}$ e $f_{2F}$ solo se $q_{s1F}$, $q_{s1C}$, $q_{s2F}$, $q_{s2C}$ sono numeri noti; la versione precedente le risolveva così, ottenendo una formula esplicita di $f_{1F}$ e riducendo il sistema a $[q_1,\eta_1]$. I trasporti però dipendono dalla composizione dei rami, per due vie:
 
-$$
+```math
 q_{six} = q_{six}(D_i,\,f_{iF}): \qquad
 d_{g,i} = 2^{-(f_{iC}\,\phi_C + f_{iF}\,\phi_F)}
 \ \Longrightarrow\
 \theta_{g,i} = \frac{\tau_i}{\rho g\Delta\,d_{g,i}}, \quad
 g_{hr,x} = \left(\frac{d_x}{d_{g,i}}\right)^{-b}
-$$
-
+```
 La formula esplicita era quindi circolare: $f_{1F}$ compariva anche a secondo membro, dentro i $q_s$. Valutando i $q_s$ con una composizione fissata (ad esempio quella della madre) si otteneva un $f_{1F}$ che non soddisfa (6)–(7) una volta ricalcolati i trasporti con quel valore.
 
 Il secondo motivo è la singolarità. Il determinante del sistema lineare (6)–(7) è proporzionale al denominatore della vecchia formula:
 
-$$
+```math
 \det \propto q_{s1F}\,q_{s2C} - q_{s1C}\,q_{s2F} = 0
 \quad\Longleftrightarrow\quad
 \frac{q_{s1F}}{q_{s1C}} = \frac{q_{s2F}}{q_{s2C}}
-$$
+```
+Nel regime di basso trasporto ($\zeta<1.35$, $`G=0.002\,\zeta^{7.5}`$) lo sforzo si semplifica nel rapporto tra le classi, che dipende solo dalla composizione:
 
-Nel regime di basso trasporto ($\zeta<1.35$, $G=0.002\,\zeta^{7.5}$) lo sforzo si semplifica nel rapporto tra le classi, che dipende solo dalla composizione:
-
-$$
+```math
 \frac{q_{sF}}{q_{sC}} = \left(\frac{g_{hr,F}}{g_{hr,C}}\right)^{7.5}
-$$
-
+```
 Con la stessa composizione nei due rami il rapporto è identico, il determinante è nullo e $f_{1F}$ è indeterminato; vicino a questa condizione il sistema è mal condizionato e $f$ può uscire da $[0,1]$. Sull'Orco la classe grossolana è spesso in questo regime. Il significato fisico è che la differenza di composizione tra i rami (il sorting) è un risultato dell'accoppiamento tra bilanci di cella (4)–(5) e continuità (6)–(7), non un dato da cui partire.
 
 | Equazione | Eliminata per sostituzione | Motivo |
@@ -430,16 +396,14 @@ Restano 4 equazioni, (4)–(7), in 4 incognite $[q_1,\eta_1,f_{1F},f_{2F}]$, ris
 
 Con $\eta_2=2\eta_0-\eta_1$ si ha $\eta_1-\eta_2=2(\eta_1-\eta_0)$, e le (4)–(5) diventano le due equazioni residuo seguenti, risolte con `fsolve` insieme alle continuità solide (6)–(7):
 
-$$
+```math
 \frac{f_{0F}\,q_{s0F}}{W_0}\left[\frac{2q_1W_1 - q_0W_0 - q_0W_1 + q_0W_2}{2\alpha\,q_0} - \frac{4r\,(\eta_1 - \eta_0)}{\sqrt{\theta_{g0}\,l_{hr,F}}}\right]
 = \frac{1}{2\alpha W_0}\Big[2f_{1F}\,q_{s1F}\,W_1 - f_{0F}\,q_{s0F}\,W_0 - f_{0F}\,q_{s0F}\,(W_1 - W_2)\Big]
-$$
-
-$$
+```
+```math
 \frac{f_{0C}\,q_{s0C}}{W_0}\left[\frac{2q_1W_1 - q_0W_0 - q_0W_1 + q_0W_2}{2\alpha\,q_0} - \frac{4r\,(\eta_1 - \eta_0)}{\sqrt{\theta_{g0}\,l_{hr,C}}}\right]
 = \frac{1}{2\alpha W_0}\Big[2q_{s1C}\,W_1 - 2f_{1F}\,q_{s1C}\,W_1 - f_{0C}\,q_{s0C}\,W_0 - f_{0C}\,q_{s0C}\,(W_1 - W_2)\Big]
-$$
-
+```
 I trasporti $q_{s1x}$ e $q_{s2x}$ non sono costanti: dipendono da $D_1(\eta_1)$, $D_2(\eta_1)$ tramite $\tau=\rho g D S$, e da $f_{1F}$, $f_{2F}$ tramite $d_g$ e $g_{hr}$. A ogni iterazione di `fsolve` si ricalcolano quindi $D_i$, poi $q_{six}$, poi i residui di (4)–(7). Ottenuti $q_1$, $\eta_1$, $f_{1F}$ e $f_{2F}$, si ricavano $q_2$, $\eta_2$, $D_1$, $D_2$ e i flussi solidi dei figli, e si torna alle condizioni del volo con le regole di §4.3 ($\psi$ per portate liquide e solide, fattore $W_0^m/W_0^{bf}$ per le larghezze).
 
 ### 5.4 Confluenza
@@ -447,14 +411,13 @@ I trasporti $q_{s1x}$ e $q_{s2x}$ non sono costanti: dipendono da $D_1(\eta_1)$,
 La confluenza somma i flussi in entrata e non richiede un sistema non lineare:
 
 - Portata liquida: $Q_0=Q_1+Q_2$; il tirante $D_0$ si ricava da Manning invertita e $\eta_0=z_{DTM}-D_0$.
-- Flussi solidi totali per classe: $Q_{s,x}=f_{1x}\,q_{s1x}\,W_1+f_{2x}\,q_{s2x}\,W_2$.
+- Flussi solidi totali per classe: $`Q_{s,x}=f_{1x}\,q_{s1x}\,W_1+f_{2x}\,q_{s2x}\,W_2`$.
 - Trasporto per unità di larghezza a valle: $q_{s0x}=Q_{s,x}/W_0$.
 - Composizione della superficie a valle: la frazione $f_F$ che, con la capacità di trasporto della sezione di valle, trasporta fine e grossolano nel rapporto dell'apporto (equazione sotto). Diventa la condizione di monte per il tratto successivo e per l'eventuale biforcazione seguente.
 
-$$
+```math
 \frac{f\,q_{sF}(f)}{(1-f)\,q_{sC}(f)} = \frac{Q_{s,F}}{Q_{s,C}}
-$$
-
+```
 Il rapporto dei flussi $Q_{s,x}/\sum Q_s$ descrive la composizione del materiale trasportato, non quella della superficie del letto, che è la grandezza usata da Wilcock-Crowe.
 
 ---
@@ -481,7 +444,7 @@ Questa sezione raccoglie i problemi emersi applicando il modulo morfodinamico (`
 
 ### 7.1 Stato dei nodi
 
-Valori stampati dalla tabella diagnostica del modulo morfodinamico (sezione 5 dello script). $D_{0}$, $D_{1,s}$, $D_{2,s}$ sono i tiranti di Shields $\theta^*_{BF}\Delta d_{50}/S$ della madre e dei rami; $W_0^m$ è la larghezza della maschera, $W_0^{bf}$ quella bankfull dal DTM; `exit` è il codice di uscita di `fsolve`.
+Valori stampati dalla tabella diagnostica del modulo morfodinamico (sezione 5 dello script). $D_{0}$, $D_{1,s}$, $D_{2,s}$ sono i tiranti di Shields $`\theta^*_{BF}\Delta d_{50}/S`$ della madre e dei rami; $W_0^m$ è la larghezza della maschera, $W_0^{bf}$ quella bankfull dal DTM; `exit` è il codice di uscita di `fsolve`.
 
 | Bif | $S_0$ | $S_1$ | $S_2$ | $D_0$ (m) | $D_{1,s}$ (m) | $D_{2,s}$ (m) | $W_0^m$ (m) | $W_0^{bf}$ (m) | exit | Causa principale |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -509,26 +472,26 @@ Quello che funziona: la portata è conservata a tutti i nodi e alle confluenze, 
 **Perché crea il problema.** Le pendenze entrano nel nodo in due modi.
 
 1. Il tirante bankfull è inversamente proporzionale alla pendenza:
-$$
+```math
 D = \frac{\theta^*_{BF}\,\Delta\,d_{50}}{S} \approx \frac{0.005\ \text{m}}{S}
 \quad\Longrightarrow\quad
 S=1.6\cdot10^{-4}\ \Rightarrow\ D\approx31\ \text{m}
-$$
+```
 Con un tirante di 9–31 m il livello bankfull supera il terreno (§7.3) e la geometria del nodo non ha più significato.
 
 2. Il nodo BRT è molto sensibile al rapporto tra le pendenze dei rami. Con il pelo libero comune i tiranti dei rami sono vicini, quindi lo sforzo $\tau=\rho g D S$ scala circa con $S$. Nel regime di basso trasporto di Wilcock-Crowe ($\zeta<1.35$):
-$$
+```math
 q_s \propto \tau^{3/2}\,\zeta^{7.5} \propto \tau^{9}
 \quad\Longrightarrow\quad
 \frac{q_{s1}}{q_{s2}} \sim \left(\frac{S_1}{S_2}\right)^{9}
-$$
+```
 Una differenza del 10% tra $S_1$ e $S_2$ cambia il rapporto dei trasporti di un fattore 2.4; un rapporto di 3 lo cambia di un fattore $\sim 2\cdot10^4$. Con rapporti di pendenza di 3–70 le continuità solide (6)–(7) e i bilanci di cella (4)–(5) non hanno una soluzione con entrambi i rami attivi: `fsolve` non converge (exit 0 o −3, residuo $10^{0}$–$10^{5}$) oppure converge con un ramo chiuso ($q_2<0$ in 106).
 
 Nella realtà, a poche decine di metri dal nodo, la pendenza del pelo libero di madre e rami non può differire di così tanto: le differenze vengono dalla regressione su tratti di lunghezza molto diversa.
 
 **Scelte di metodo.**
 
-- **A. Pendenza del nodo su una finestra di lunghezza fissa**. Per la madre la pendenza si calcola sul pelo libero $z_{DTM}$ di un tratto di lunghezza $L$ a monte del nodo, per ciascun ramo su un tratto di lunghezza $L$ a valle, attraversando se necessario i confini tra tratti (la topologia è nota). $L$ fissa per tutta la rete, ad esempio 300–500 m, oppure proporzionale alla larghezza, $L=k\,W_0^m$ con $k\approx10$. Le pendenze restano "dal DTM" (§2.2) ma sono stimate su una scala confrontabile per madre e rami. Il calcolo nel resto della rete non cambia.
+- **A. Pendenza del nodo su una finestra di lunghezza fissa**. Per la madre la pendenza si calcola sul pelo libero $z_{DTM}$ di un tratto di lunghezza $L$ a monte del nodo, per ciascun ramo su un tratto di lunghezza $L$ a valle, attraversando se necessario i confini tra tratti (la topologia è nota). $L$ fissa per tutta la rete, ad esempio 300–500 m, oppure proporzionale alla larghezza, $`L=k\,W_0^m`$ con $k\approx10$. Le pendenze restano "dal DTM" (§2.2) ma sono stimate su una scala confrontabile per madre e rami. Il calcolo nel resto della rete non cambia.
 - **B. Sostituire il valore minimo.** Quando la regressione dà $S\le1.6\cdot10^{-4}$ o il tratto è troppo corto, si usa la pendenza del tratto a monte (o a valle) o quella della finestra A, invece di $1.6\cdot10^{-4}$. Da applicare comunque, anche con A.
 - **C. Modificare il valore di ripiego $1.6\cdot10^{-4}$.** Il minimo imposto nel pre-processing quando la regressione dà pendenza nulla o negativa si sostituisce con un valore scelto sui dati dell'Orco, ad esempio un percentile basso (5–10%) delle pendenze valide della rete o la pendenza media del corso d'acqua. Poiché $D\approx0.005\ \text{m}/S$, il valore di ripiego fissa direttamente il tirante massimo: con $S=10^{-3}$ si ottiene $D\approx5$ m invece di 31 m. È la modifica più semplice, ma resta un valore unico per tutta la rete e non corregge la differenza di pendenza tra madre e rami.
 
@@ -541,16 +504,16 @@ Nella realtà, a poche decine di metri dal nodo, la pendenza del pelo libero di 
 **Perché.** Due cause, che si sommano:
 
 1. pendenze piccole (§7.2), che danno $D$ di 9–31 m;
-2. anche dove $D$ è plausibile (1.4–1.8 m in 366, 584, 1070), le sponde reali sono più basse di $D$ rispetto al fondo ricostruito. Il criterio $\theta^*_{BF}=1.62\,\theta^*_c$ con $d_{50}=62$ mm è tarato su fiumi ghiaiosi a canale singolo con sponde ben definite; nei tratti a canali multipli dell'Orco le sponde dei singoli rami sono basse e a quel livello l'acqua allaga la piana.
+2. anche dove $D$ è plausibile (1.4–1.8 m in 366, 584, 1070), le sponde reali sono più basse di $D$ rispetto al fondo ricostruito. Il criterio $`\theta^*_{BF}=1.62\,\theta^*_c`$ con $d_{50}=62$ mm è tarato su fiumi ghiaiosi a canale singolo con sponde ben definite; nei tratti a canali multipli dell'Orco le sponde dei singoli rami sono basse e a quel livello l'acqua allaga la piana.
 
 **Scelte di metodo.**
 
 - **A. Bankfull geomorfologico dal DTM** *(proposta principale)*. Sul transetto si cerca il livello di sfioro $z_{sfioro}$, cioè la quota più bassa a cui l'acqua esce dall'alveo: il minimo tra i massimi del profilo a sinistra e a destra della centerline (entro una distanza massima). Il tirante bankfull diventa
-$$
+```math
 D_{bf} = \min\left(D_{Shields},\; z_{sfioro}-\eta\right)
-$$
+```
 Shields resta il riferimento teorico, la geometria lo limita. Con $D_{bf}$ si calcolano $W^{bf}$, $Q^{bf}$ e lo Shields bankfull effettivo $\theta_{bf}=D_{bf}S/(\Delta d_{50})$, da riportare per controllo.
-- **B. Calibrare $\theta^*_{BF}$ sull'Orco.** Si stima $\theta^*_{BF}$ nelle sezioni a canale singolo con sponde ben definite (dove il livello di sfioro è chiaro) e si usa quel valore in tutta la rete al posto di $1.62\,\theta^*_c$. Mantiene un criterio unico, ma richiede di scegliere le sezioni di taratura.
+- **B. Calibrare $`\theta^*_{BF}`$ sull'Orco.** Si stima $`\theta^*_{BF}`$ nelle sezioni a canale singolo con sponde ben definite (dove il livello di sfioro è chiaro) e si usa quel valore in tutta la rete al posto di $`1.62\,\theta^*_c`$. Mantiene un criterio unico, ma richiede di scegliere le sezioni di taratura.
 
 ### 7.4 Larghezze bankfull non calcolabili
 
@@ -612,21 +575,20 @@ Questa sezione raccoglie le modifiche introdotte nel codice il 12/10/2026 (`2_OR
 
 **Tirante bankfull.** Il tirante di Shields si limita con il livello di sfioro del transetto e non scende mai sotto il tirante critico:
 
-$$
+```math
 D_0 = \max\Big(\min\big(D_S,\ z_{sfioro}-\eta_0\big),\ D_c\Big), \qquad
 D_S = \frac{1.62\,\theta^*_c\,\Delta\,d_{50}}{S_0}, \qquad
 D_c = \frac{\theta^*_c\,\Delta\,d_{50}}{S_0}
-$$
-
+```
 $z_{sfioro}$ è il più basso dei due punti più alti del terreno, uno per lato, tra $W^m/2$ e $3W^m$ dalla centerline. Dove il tirante si ferma a $D_c$ (sponde basse) la larghezza resta quella misurata al livello di sfioro. Le larghezze dei rami si misurano con il tirante di Shields calcolato con $S_0$; se non sono calcolabili si usa il rapporto delle larghezze delle maschere.
 
 **Calcolo della larghezza bankfull al nodo (verificato sul codice il 19/11/2026, `W_bankfull_from_dtm.m` e `MorphodynamicModule.m`).** La larghezza non è legata al tirante critico: si misura al livello bankfull di Shields, limitato dalle sponde.
 
-1. Livello di partenza: $\eta_0+D_S$, con $\eta_0$ fondo del modulo idraulico e $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$.
+1. Livello di partenza: $\eta_0+D_S$, con $\eta_0$ fondo del modulo idraulico e $`D_S=1.62\,\theta^*_c\Delta d_{50}/S_0`$.
 2. Si traccia il transetto perpendicolare alla centerline sul DTM corretto dal modulo idraulico e si cerca il livello di sfioro $z_{sfioro}$ tra $W^m/2$ e $3W^m$ dalla centerline. Se il livello di Shields supera $z_{sfioro}$, il livello diventa $z_{sfioro}$ − 1 cm.
 3. Le sponde sono le prime intersezioni del livello con il terreno oltre $W^m/2$, una per lato; se si trova un solo lato, l'altro si ottiene per simmetria.
 4. L'area $A$ tra le sponde sotto il livello dà la larghezza rettangolare equivalente $W^{bf}=A/D$, con $D$ profondità del livello sul fondo; si impone $W^{bf}\ge W^m$.
-5. Se la profondità al livello di sfioro è minore del tirante critico $D_c$, il tirante del nodo diventa $D_0=D_c$, ma larghezza e area restano quelle misurate al livello di sfioro (sponde basse, $\theta_{bf}/\theta^*_c=1$).
+5. Se la profondità al livello di sfioro è minore del tirante critico $D_c$, il tirante del nodo diventa $D_0=D_c$, ma larghezza e area restano quelle misurate al livello di sfioro (sponde basse, $`\theta_{bf}/\theta^*_c=1`$).
 6. Per i rami si ripete lo stesso calcolo alla loro prima sezione, con lo stesso $D_S$ (pendenza della madre); le due larghezze si riscalano poi in modo che $W_1+W_2=W_0$.
 
 **Sistema del nodo in forma BRT (6 equazioni).** Come in Bolla Pittaluga et al. (2003) e Ragno et al. (2023), il pelo libero è comune al nodo e i due rami, di uguale lunghezza, terminano allo stesso livello: hanno quindi la stessa pendenza di equilibrio $S_b$, che è un'incognita. Incognite $[\psi, D_1, D_2, S_b, f_{1F}, f_{2F}]$ con $\psi=Q_1/Q_0$; equazioni:
@@ -645,26 +607,22 @@ $z_{sfioro}$ è il più basso dei due punti più alti del terreno, uno per lato,
 6. **due celle di lunghezza $\alpha W_0$ a monte del nodo** ($\alpha=4$): il flusso laterale di sedimento tra le celle è dovuto alla deviazione della corrente e al richiamo gravitativo lungo la pendenza trasversale (coefficiente di Ikeda $r=0.65$, "grain independence", §4.4);
 7. **larghezze note**, con $W_1+W_2=W_0$; la soluzione bilanciata di riferimento è la ripartizione proporzionale alle larghezze, $\psi=W_1/W_0$.
 
-Equazioni, nelle 6 incognite $\psi$, $D_1$, $D_2$, $S_b$, $f_{1F}$, $f_{2F}$ (con $Q_1=\psi Q_0$, $Q_2=(1-\psi)Q_0$ e $Q_{si,x}=f_{ix}\,q_{six}(D_i,S_b,f_{iF})\,W_i$):
+Equazioni, nelle 6 incognite $\psi$, $D_1$, $D_2$, $S_b$, $f_{1F}$, $f_{2F}$ (con $Q_1=\psi Q_0$, $Q_2=(1-\psi)Q_0$ e $`Q_{si,x}=f_{ix}\,q_{six}(D_i,S_b,f_{iF})\,W_i`$):
 
-$$
+```math
 \psi\,Q_0 = \frac{W_1\,D_1^{5/3}\sqrt{S_b}}{n}, \qquad
 (1-\psi)\,Q_0 = \frac{W_2\,D_2^{5/3}\sqrt{S_b}}{n} \tag{1–2}
-$$
-
-$$
+```
+```math
 f_{0x}\,q_{sy,x} = \frac{1}{2\alpha W_0}\left(Q_{s1,x} - Q_{s2,x} - Q_{s0,x}\,\frac{W_1 - W_2}{W_1 + W_2}\right), \qquad x = F, C \tag{3–4}
-$$
-
-$$
+```
+```math
 q_{sy,x} = q_{s0,x}\left[\frac{Q_y}{\alpha W_0\,q_0} - \frac{r}{\sqrt{\theta_{g0}\,l_{hr,x}}}\,\frac{2\,(D_2 - D_1)}{W_0}\right], \qquad
 Q_y = \frac{1}{2}\left(Q_1 - Q_2 - Q_0\,\frac{W_1 - W_2}{W_0}\right)
-$$
-
-$$
+```
+```math
 Q_{s1,x} + Q_{s2,x} = Q_{s0,x}, \qquad x = F, C \tag{5–6}
-$$
-
+```
 Le (1)–(2) sono il moto uniforme nei rami, le (3)–(4) i bilanci di cella per le classi fine e grossolana, le (5)–(6) la continuità solida. La continuità liquida è implicita nell'uso di $\psi$.
 
 L'equazione (8), $\eta_0=(\eta_1+\eta_2)/2$, e le pendenze imposte ai rami non si usano più. Motivo: il sistema di §5.2 non conteneva il moto uniforme nei rami. Con le pendenze misurate (rami 1.5–5 volte più ripidi della madre) non aveva soluzione; con la stessa pendenza nei tre rami dava una seconda soluzione in cui un ramo portava fino a 2.5 volte la portata compatibile con il suo tirante, e con rami di uguale larghezza non dava mai le soluzioni asimmetriche di BRT. La forma a 6 equazioni le ritrova: con rami uguali, sotto un rapporto di forma critico $\beta=W_0/(2D_0)\approx13$ esiste solo la soluzione bilanciata, sopra compaiono due soluzioni asimmetriche speculari.
@@ -673,9 +631,21 @@ L'equazione (8), $\eta_0=(\eta_1+\eta_2)/2$, e le pendenze imposte ai rami non s
 
 **Ritorno al volo.** $\psi$ e $\psi_x$ ripartiscono portata e flussi solidi del volo come in §4.3; la prima sezione di ogni ramo si calcola con il moto uniforme alla sua portata, come ogni altra sezione. Le quote bankfull $\eta_i=\eta_0+D_0-D_i$ restano una diagnostica: usate direttamente al volo davano fondi sopra il pelo libero in 5–7 nodi.
 
-![Nodo aggiornato: bankfull con limiti delle sponde, sistema BRT a 6 equazioni, ritorno al volo con il moto uniforme](fig/nodo_sezione_rettangolarizzata_v2.png)
+![Nodo aggiornato: bankfull con limiti delle sponde, sistema BRT a 6 equazioni, ritorno al volo con il moto uniforme](fig/nodi_new.png)
 
-*Figura aggiornata (20/11/2026), da confrontare con quella del §4.3 (script: `docs/fig/nodo_sezione_rettangolarizzata_v2.py`).* Pannello a: il tirante bankfull della madre è il tirante di Shields limitato dal livello di sfioro e mai sotto il tirante critico, con $S_0$ dalla finestra di 400 m a monte del nodo. Pannello b: il nodo è risolto nella forma BRT, con pelo libero comune, stessa pendenza di equilibrio $S_b$ nei due rami (incognita) e due celle di lunghezza $\alpha W_0$ a monte; non c'è più la chiusura $\eta_0=(\eta_1+\eta_2)/2$. Le larghezze dei rami si misurano al livello di Shields calcolato con $S_0$ e si riscalano su $W_0$. Pannello c: al volo si ripartiscono portata e flussi solidi con $\psi$ e $\psi_x$; ogni sezione dei rami, la prima compresa, si calcola con il moto uniforme, la larghezza della maschera e la pendenza del tratto. Le quote bankfull $\eta_i$ e le larghezze riscalate restano solo diagnostica.
+*Figura aggiornata (20/11/2026), da confrontare con quella del §4.3 (sorgente LaTeX: `docs/fig/nodi_new.tex`).* Pannello a: il tirante bankfull della madre è il tirante di Shields limitato dal livello di sfioro e mai sotto il tirante critico, con $S_0$ dalla finestra di 400 m a monte del nodo. Pannello b: il nodo è risolto nella forma BRT, con pelo libero comune, stessa pendenza di equilibrio $S_b$ nei due rami (incognita) e due celle di lunghezza $\alpha W_0$ a monte; non c'è più la chiusura $\eta_0=(\eta_1+\eta_2)/2$. Le larghezze dei rami si misurano al livello di Shields calcolato con $S_0$ e si riscalano su $W_0$. Pannello c: al volo si ripartiscono portata e flussi solidi con $\psi$ e $\psi_x$; ogni sezione dei rami, la prima compresa, si calcola con il moto uniforme, la larghezza della maschera e la pendenza del tratto. Le quote bankfull $\eta_i$ e le larghezze riscalate restano solo diagnostica.
+
+**Cosa è cambiato al nodo rispetto alla formulazione iniziale (§4.3) e perché.**
+
+| | Formulazione iniziale (§4.3) | Metodo attuale (codice) | Perché |
+| --- | --- | --- | --- |
+| **Tirante bankfull della madre $D_0$** | tirante di Shields $`1.62\,\theta^{*}_c\Delta d_{50}/S_0`$ | tirante di Shields, ma non oltre il livello di sfioro del transetto e mai sotto il tirante critico | con il solo Shields il livello bankfull usciva dalle sponde o il tirante era troppo piccolo |
+| **Pendenza della madre $S_0$** | pendenza del tratto | retta sul pelo libero entro 400 m a monte del nodo | con la pendenza minima del tratto (1.6·10⁻⁴) il tirante bankfull veniva circa 31 m |
+| **Tirante usato per le larghezze dei rami** | calcolato con la pendenza del ramo $S_i$ | lo stesso tirante di Shields calcolato con $S_0$ | la pendenza dei rami ora è un'incognita del nodo |
+| **Sistema del nodo** | chiusura $\eta_0=(\eta_1+\eta_2)/2$ e pendenze dei rami imposte | forma BRT a 6 equazioni (incognite $\psi$, $D_1$, $D_2$, $S_b$, $f_{1F}$, $f_{2F}$), con moto uniforme nei rami e stessa pendenza di equilibrio $S_b$ incognita | il vecchio sistema non conteneva il moto uniforme nei rami: con le pendenze misurate non aveva soluzione, con pendenze uguali dava portate incompatibili con i tiranti e non trovava mai le soluzioni asimmetriche di BRT |
+| **Ritorno al volo** | fondo dei rami $\eta_i$ del nodo, tirante $z_{DTM}-\eta_i$, larghezze ridotte di $W_0^m/W_0^{bf}$ | ogni sezione dei rami, la prima compresa, dal moto uniforme con larghezza della maschera e pendenza del tratto; $\eta_i$ e le larghezze ridotte solo diagnostica | con $\eta_i$ usato direttamente al volo, in 5–7 nodi il fondo finiva sopra il pelo libero |
+
+Restano validi la larghezza equivalente $W_0^{bf}=A_0/D_0\geq W_0^m$, la riscalatura $W_1+W_2=W_0$ e la ripartizione al volo con $\psi$ e $\psi_x$.
 
 ### 9.2 Risultati del run di riferimento (larghezze bankfull)
 
@@ -721,7 +691,7 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 | # | Punto | Stato | Prossimo passo |
 | --- | --- | --- | --- |
 | 1 | **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione al nodo (§9.3) | aperto; confermato dal run del 18/11 sera: a 1369 $\beta$ passa da 12.0 a 11.7 e il nodo diventa bilanciato (§9.8). Nel run del 19/11, con $z_{DTM}$ corretta, 1369 torna asimmetrico ($\beta$ = 14.9) e $\beta$ cambia di 2–5 in altri quattro nodi (§9.10). Run del 20/11: alla sezione 256 (ramo del nodo 244) una sola sponda viene trovata e specchiata, e $W_2^{dtm}$ passa da 78.3 a 88.1 m senza cambiare la soluzione: esempio della fragilità della stima | sponde cercate solo nel canale attivo che alimenta il nodo; da mettere nell'analisi di sensitività |
-| 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico (5 su 10 nel run del 18/11 sera); $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
+| 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico (5 su 10 nel run del 18/11 sera); $`\theta^*_{BF}=1.62\,\theta^*_c`$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
 | 3 | **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s) | aperto | — |
 | 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto (invariato nel run del 18/11 sera). Run del 19/11: il nodo 15 salta da $\psi$ = 0.41 a 0.82 solo perché $\psi_{hyd}$ passa da 0.49 a 0.67 (§9.10) | domanda 4 a Carlo; regola di scelta e larghezza bankfull nell'analisi di sensitività |
 | 5 | **Dati ADCP** (8 transetti del 07/03/2025) | integrati nel codice il 19/11/2026 come stazioni a01–a08, senza distinzione dalle sezioni GNSS (§9.9); run del 19/11: residuo 0.3–0.6 m più alto delle GNSS vicine perché i transetti coprono soprattutto le parti profonde, non guadabili; errore medio su tutte le stazioni da +0.22 a +0.33 m (§9.9, §9.10) | decidere come entrano nella validazione (con la media di stazione insieme alle GNSS, solo separati, o solo dove completano una sezione GNSS) e con quale peso (domanda 6 a Carlo, `adcp_min_spacing` = 0) |
@@ -773,7 +743,7 @@ Gli intervalli al 95% sono calcolati con il bootstrap delle **stazioni**, non de
 
 **Confronto stazione per stazione.** Il modulo idraulico ha l'RMSE più basso in 38 stazioni su 48 (test del segno a due code, p ≈ 6·10⁻⁵). La differenza di RMSE complessiva, +1.3 cm (intervallo +0.7…+1.8 cm), esclude lo zero: è piccola ma sistematica, non casuale. È più marcata nei tratti a valle di una biforcazione, dove il modulo morfodinamico è più vicino ai GNSS in una sola stazione su 18, e negli altri tratti a canali multipli (+2.7 cm). Nel canale singolo il modulo morfodinamico è più vicino in 5 stazioni su 8, per una ragione che non dipende dal nodo (punto 1 qui sotto).
 
-**Dove agisce il modulo morfodinamico.** Le quote di fondo dei due moduli lungo la centerline coincidono nei tratti 0 e 3, a monte della prima biforcazione. Più a valle differiscono in tutti i tratti, non solo nel primo tratto dei rami: il modulo morfodinamico cambia la ripartizione della portata a ogni nodo, e con essa la portata e il tirante di tutta la rete a valle. Le portate di ogni tratto, ricavate dalle quote di fondo dei due moduli con $Q = W\,h^{5/3}S^{1/2}/n$ e $h = z_{DTM} - z_{fondo}$, mostrano però due problemi che pesano su questo confronto.
+**Dove agisce il modulo morfodinamico.** Le quote di fondo dei due moduli lungo la centerline coincidono nei tratti 0 e 3, a monte della prima biforcazione. Più a valle differiscono in tutti i tratti, non solo nel primo tratto dei rami: il modulo morfodinamico cambia la ripartizione della portata a ogni nodo, e con essa la portata e il tirante di tutta la rete a valle. Le portate di ogni tratto, ricavate dalle quote di fondo dei due moduli con $`Q = W\,h^{5/3}S^{1/2}/n`$ e $h = z_{DTM} - z_{fondo}$, mostrano però due problemi che pesano su questo confronto.
 
 1. **Il modulo idraulico non conserva la portata.** Il tratto 6 riceve 5.00 m³/s, cioè la portata del tratto 5, invece dei 5.80 m³/s del tratto 4 da cui nasce. Da lì in poi la rete del modulo idraulico porta 9.99 m³/s invece di 10.80 m³/s (−7.5%). La causa più probabile, coerente con questi valori, è nel ciclo delle sezioni di `Preprocessing_HydraulicModule.m`: nei blocchi del canale singolo e della confluenza la portata viene scritta anche nella riga successiva (`Q_map(i+1)`), anche quando quella riga è la prima sezione di un altro tratto, e quel tratto conserva poi il valore sbagliato. Il modulo morfodinamico propaga la portata per tratti e la conserva a tutti i nodi. Per questo, nei tratti a canale singolo 8 e 14, i due moduli differiscono di −2.5 e −1.6 cm: il morfodinamico, con la portata giusta, ha un fondo più profondo. Sono queste le differenze delle stazioni s001, s002, s004–s006 e s028–s030, e una parte delle differenze a valle. La propagazione è stata corretta nel codice dopo questa validazione (§9.4, punto 6): i numeri di questa sezione sono quelli del run precedente.
 2. **Due rami non hanno un tratto a valle.** Il ramo 16–15 e il ramo 29 terminano senza ricollegarsi alla rete: la fine del tratto 15 dista circa 100 m dal tratto più vicino, quella del 29 circa 140 m, mentre la soglia di collegamento è 51 m. La loro portata esce dalla rete: 1.47 + 0.70 m³/s nel modulo idraulico, 2.65 + 1.39 m³/s nel morfodinamico. A valle del tratto 30 la rete porta così 7.83 m³/s (idraulico) e 6.75 m³/s (morfodinamico) invece di 10.80 m³/s. Meno portata significa tiranti minori e fondo più alto: è una possibile causa dell'errore positivo, più forte nella rete a canali multipli. L'analisi dei due rami (§9.7) mostra che al momento del volo sono quasi fermi e non portano una portata apprezzabile.
@@ -816,7 +786,7 @@ Il filtro sui salti isolati e `segments_to_smooth` restano invariati. Dopo il ri
 
 **Esito (run del 19/11/2026, §9.10).** Salti segnalati dal filtro da 149 a 2; i tratti di `segments_to_smooth` non oscillano più; a s006, s019 e s020 $z_{DTM}$ coincide con il DTM completo entro 4 cm e i residui medi diventano −0.21, +0.27 e −0.04 m. La correlazione del punto 3 della proposta qui sotto non è stata ricalcolata. Il profilo monotono (punto 2 della proposta) servirebbe ora solo per poche risalite di 10–55 cm e per il salto di +1.1 m in fondo al tratto 0: da decidere (punto 8 della §9.4).
 
-**Regola per i salti isolati (20/11/2026).** Il filtro sui salti (curvatura oltre 1 m) e la lista `segments_to_smooth` (mediana mobile su tratti scelti a mano) sono sostituiti da una sola regola, uguale per tutti i tratti. Per ogni sezione interna $i$ di un tratto, con $d_1=z_i-z_{i-1}$ e $d_2=z_i-z_{i+1}$, la sezione è un salto isolato se è un estremo locale stretto ($d_1 d_2>0$) e se si stacca da **entrambe** le vicine di più della soglia: $\min(|d_1|,|d_2|)>\max(\text{glitch\_tol},\,3\sigma_e)$, con $\sigma_e=1.4826\,\mathrm{MAD}(e)$ del tratto, $e_i=z_i-(z_{i-1}+z_{i+1})/2$ e glitch_tol = 0.20 m. Un salto isolato è sostituito dalla media delle due vicine, sui valori grezzi. La condizione su entrambi i lati lascia intatti i gradini. Con i dati del 20/11 la regola corregge 2 sezioni: 728 (tratto 26, +0.36 e +0.39 m dalle vicine) e 1239 (tratto 35, +0.55 e +0.51 m). La prima versione della regola, provata nel run del 20/11 (§9.13), chiedeva solo $|e_i|>$ soglia e correggeva anche la 492 (piede di un gradino di −0.71 m, che portava a metà gradino) e la 14 (salto alla fine del tratto 0): per questo è stata resa più stretta.
+**Regola per i salti isolati (20/11/2026).** Il filtro sui salti (curvatura oltre 1 m) e la lista `segments_to_smooth` (mediana mobile su tratti scelti a mano) sono sostituiti da una sola regola, uguale per tutti i tratti. Per ogni sezione interna $i$ di un tratto, con $d_1=z_i-z_{i-1}$ e $d_2=z_i-z_{i+1}$, la sezione è un salto isolato se è un estremo locale stretto ($d_1 d_2>0$) e se si stacca da **entrambe** le vicine di più della soglia: $`\min(|d_1|,|d_2|)>\max(\text{glitch\_tol},\,3\sigma_e)`$, con $`\sigma_e=1.4826\,\mathrm{MAD}(e)`$ del tratto, $e_i=z_i-(z_{i-1}+z_{i+1})/2$ e glitch_tol = 0.20 m. Un salto isolato è sostituito dalla media delle due vicine, sui valori grezzi. La condizione su entrambi i lati lascia intatti i gradini. Con i dati del 20/11 la regola corregge 2 sezioni: 728 (tratto 26, +0.36 e +0.39 m dalle vicine) e 1239 (tratto 35, +0.55 e +0.51 m). La prima versione della regola, provata nel run del 20/11 (§9.13), chiedeva solo $|e_i|>$ soglia e correggeva anche la 492 (piede di un gradino di −0.71 m, che portava a metà gradino) e la 14 (salto alla fine del tratto 0): per questo è stata resa più stretta.
 
 **Limite che resta.** La media comprende tutti i punti del transetto tra il primo e l'ultimo pixel della maschera del segmento (passo 0.5 m). Se in mezzo alla sezione c'è un'isola o una barra fuori dalla maschera, la sua quota entra nella media e alza $z_{DTM}$. Alla sezione 170 l'effetto è trascurabile (media e mediana differiscono di 1 cm), ma non è stato verificato su tutta la rete; va dichiarato tra i limiti del metodo.
 
@@ -860,7 +830,7 @@ Run con la portata propagata solo dentro il tratto (punto 6 della §9.4) e i tra
 
 **Nodi.** 366 e 817 sono "branch without discharge" in entrambi i moduli. Gli altri 10 nodi sono risolti dal sistema (residuo ≤ 1.9·10⁻¹⁵).
 
-Come leggere la tabella (simboli nella §1): $\beta=W_0^{bf}/(2D_0)$ è il rapporto di forma bankfull della madre e decide quante soluzioni ha il nodo; $\psi$ è la quota di portata del ramo 1 nella soluzione adottata; $W_1/W_0$ è la $\psi$ della soluzione bilanciata, quindi $\psi\neq W_1/W_0$ indica una soluzione asimmetrica; $\psi_{hyd}$ è la quota del ramo 1 nel modulo idraulico, usata per scegliere tra le asimmetriche; $\theta_{bf}/\theta^*_c$ dice quale limite fissa il tirante bankfull della madre (1.62: Shields pieno; 1.00: tirante critico, sponde basse; intermedio: livello di sfioro).
+Come leggere la tabella (simboli nella §1): $\beta=W_0^{bf}/(2D_0)$ è il rapporto di forma bankfull della madre e decide quante soluzioni ha il nodo; $\psi$ è la quota di portata del ramo 1 nella soluzione adottata; $W_1/W_0$ è la $\psi$ della soluzione bilanciata, quindi $\psi\neq W_1/W_0$ indica una soluzione asimmetrica; $\psi_{hyd}$ è la quota del ramo 1 nel modulo idraulico, usata per scegliere tra le asimmetriche; $`\theta_{bf}/\theta^*_c`$ dice quale limite fissa il tirante bankfull della madre (1.62: Shields pieno; 1.00: tirante critico, sponde basse; intermedio: livello di sfioro).
 
 | Bif | $\beta$ | $\psi$ | $W_1/W_0$ | $\psi_{hyd}$ | soluzioni | tipo | $\theta/\theta_c$ madre | run prec. (§9.3): $\beta$ / $\psi$ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1155,7 +1125,8 @@ Il nodo è la testa della rete: la finestra a monte si ferma all'inizio del trat
 | 19/11/2026 | Aggiunta in testa la sezione "Stato del lavoro" (resoconto per giornata). Aggiunta la §9.8: risultati dei run del 18/11 sera con la rete corretta (bilancio di portata, nodi, validazione GNSS, confronto dei moduli, verifica di $z_{DTM}$ alla sezione 170). §9.4: chiusi i punti 6 e 7, aggiornati 1, 2, 4, 8, 10, 11, 13; nuovi punti 14 (parità nel test del segno) e 15 (trasporto al volo nullo). Nota in testa alla §9.5 e verifica in §9.6. |
 | 19/11/2026 | Tolta la §8 "Domande per Carlo": le domande aperte sono in `docs/Domande_per_Carlo.md`. Aggiunte la §9.9 (dati ADCP nella validazione, sottostazioni di s003 e s007) e in §9.1 il calcolo della larghezza bankfull al nodo verificato sul codice. §9.4: aggiornati i punti 5, 9 e 10. Codice: `read_field_points.m` (nuova), `validation_gnss_mean.m`, `station_reach_class.m`, `gnss_cross_section_profiles.m`, i tre script principali e il config (`adcp_file`, `adcp_min_spacing`, `gnss_station_split`). |
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
-| 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
+| 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $`\theta^*_c`$, $`\theta^*_{BF}`$, $`\theta_{bf}/\theta^*_c`$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
+| 20/11/2026 | Figure del nodo rigenerate in LaTeX (`docs/fig/nodi.tex` → `nodi.png` nel §4.3, `docs/fig/nodi_new.tex` → `nodi_new.png` nel §9.1); tabella nel §9.1 su cosa è cambiato al nodo e perché; formule rese leggibili su GitHub (blocchi `math` al posto di `$$` e formule in linea tra `` $` `` e `` `$ `` dove contengono `\,`, `\_` o `*`). |
 | 20/11/2026 | Figura aggiornata del nodo nel §9.1 (`docs/fig/nodo_sezione_rettangolarizzata_v2.png`) e nota nel §4.3 su cosa è cambiato rispetto alla formulazione iniziale; punto 11 della §9.4 aggiornato. |
 | 20/11/2026 | Figura del §4.3 (sezione rettangolarizzata al nodo) inserita in `docs/fig/`, al posto del segnaposto. |
 | 20/11/2026 | Punto 21 deciso (soglia minima di $S_0$ al nodo di testa, dichiarata); piano della sensitività come domanda 8 a Carlo. |
