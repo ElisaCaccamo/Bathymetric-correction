@@ -1,6 +1,8 @@
 # Domande per Carlo
 
-## Da guardare per prima (20/11/2026)
+Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
+
+## Da guardare per prima
 
 **9. Modifiche al metodo al nodo: da rivedere.**
 
@@ -10,11 +12,9 @@ La §9.1 del documento di teoria ([Modifiche al metodo](TeoriaMetodologica_modul
 
 *Domanda.* Le modifiche sono coerenti con l'impostazione del metodo e con BRT / Ragno et al. (2023)? C'è qualcosa che cambieresti prima dell'analisi di sensitività?
 
-Le domande sono numerate in ordine di data; la 9 è messa qui in cima perché riguarda il metodo e conviene leggerla prima delle altre.
+La 9 è qui in cima perché riguarda il metodo nel suo insieme e conviene leggerla prima delle altre.
 
-## 19/11/2026
-
-Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
+## Altre domande
 
 **1. Classi delle stazioni GNSS per la validazione.**
 
@@ -67,8 +67,6 @@ Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
 - (c) Usarli solo dove completano una sezione GNSS vicina (la parte profonda che non si poteva guadare), per ottenere sezioni complete da sponda a sponda.
 
 E per il peso: diradare i punti ADCP a una spaziatura simile a quella dei GNSS (circa 1.5 m), dare lo stesso peso a ogni stazione nelle statistiche, oppure tenere tutti i punti?
-
-## 20/11/2026
 
 **7. Volo 2019 e DTM corretto del 2019 nel paper.**
 
