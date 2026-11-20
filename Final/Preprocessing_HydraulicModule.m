@@ -613,48 +613,56 @@ if numel(roots) > 1
 end
 network_root = roots(1);
 
-%% Clean anomalous single values
-tronchi_uniq = unique(all_centerlines(:,6));
+%% Clean isolated glitches of z_DTM (same rule for every segment)
+% Replaces the old curvature filter (threshold 1 m) and the manual list
+% segments_to_smooth (moving median on selected segments), removed on
+% 20/11/2026: with the nodata of the segment DTMs converted to NaN no segment
+% oscillates any more, and the moving median only removed a few isolated
+% spikes in the listed segments while flattening real downstream steps.
+%
+% Rule. For every interior section i of a segment:
+%   e_i = z_i - (z_{i-1} + z_{i+1})/2       (excess over the neighbours)
+% section i is an isolated glitch if
+%   1) it is a local extremum: (z_i - z_{i-1})*(z_i - z_{i+1}) >= 0, so a
+%      step (z_i between its neighbours) is never touched, and
+%   2) |e_i| > max(glitch_tol, 3*sigma_e), with sigma_e = 1.4826*MAD(e) of the
+%      segment (robust spread of the excess: in a noisier segment only the
+%      outliers are corrected).
+% A glitch is replaced by the mean of its two raw neighbours. The test and
+% the replacement use the raw values (z_original), so that a correction does
+% not propagate to the neighbouring sections.
+% With the 19/11/2026 data and glitch_tol = 0.20 m the rule corrects 4
+% sections: 14 (segment 0, +0.55 m), 492 (segment 19, -0.38 m), 728
+% (segment 26, +0.38 m), 1239 (segment 35, +0.53 m).
+z_original = all_centerlines(:,4);   % raw z_DTM, snapshot before the correction
 outlier_flags = false(height(all_centerlines), 1);
+glitch_excess = nan(height(all_centerlines), 1);
+tronchi_uniq = unique(all_centerlines(:,6));
 for t = tronchi_uniq'
     idx = find(all_centerlines(:,6) == t);
-    z = all_centerlines(idx, 4);
+    z = z_original(idx);
     if numel(z) < 5, continue; end
-    curvatura = [0; diff(diff(z)); 0];
-    soglia = max(1.0, 3 * mad(curvatura, 1) / 0.6745);
-    out = abs(curvatura) > soglia;
+    e = nan(size(z));
+    e(2:end-1) = z(2:end-1) - (z(1:end-2) + z(3:end)) / 2;
+    is_ext = false(size(z));
+    is_ext(2:end-1) = (z(2:end-1) - z(1:end-2)) .* (z(2:end-1) - z(3:end)) >= 0;
+    ei = e(2:end-1);
+    sigma_e = 1.4826 * median(abs(ei - median(ei, 'omitnan')), 'omitnan');
+    soglia = max(glitch_tol, 3 * sigma_e);
+    out = is_ext & abs(e) > soglia;
     outlier_flags(idx(out)) = true;
+    glitch_excess(idx(out)) = e(out);
 end
-fprintf('%d points with a probable isolated glitch of z_coords\n', nnz(outlier_flags));
-disp(all_centerlines(outlier_flags, [1 4 6]))
+fprintf('%d sections with an isolated glitch of z_coords (glitch_tol = %.2f m)\n', nnz(outlier_flags), glitch_tol);
+disp(table(all_centerlines(outlier_flags,1), all_centerlines(outlier_flags,6), z_original(outlier_flags), ...
+    glitch_excess(outlier_flags), 'VariableNames', {'ID','segment','z_raw','excess'}))
 
-z_original = all_centerlines(:,4);   % snapshot before the correction, so that errors do not propagate between neighbouring corrections
 for row = find(outlier_flags)'
     idx = find(all_centerlines(:,6) == all_centerlines(row,6));
     pos_in_tronco = find(idx == row);
-    if pos_in_tronco > 1 && pos_in_tronco < numel(idx)
-        z_prev = z_original(idx(pos_in_tronco-1));
-        z_next = z_original(idx(pos_in_tronco+1));
-        all_centerlines(row, 4) = mean([z_prev, z_next]);
-    end
-end
-%% Targeted smoothing of segments with systematic oscillation
-% (not caught by the isolated-glitch detector above, because here the noise
-% is spread over several consecutive points, not a single outlier).
-% Segments and windows from config (segments_to_smooth)
-for k = 1:numel(segments_to_smooth)
-    t = segments_to_smooth(k).segment;
-    w = segments_to_smooth(k).window;
-    idx_t = find(all_centerlines(:,6) == t);
-    if numel(idx_t) < w, continue; end
-
-    z_before = all_centerlines(idx_t, 4);
-    z_after  = movmedian(z_before, w);
-
-    fprintf('Segment %d (w=%d): range before = %.2f m, after = %.2f m\n', ...
-        t, w, max(z_before)-min(z_before), max(z_after)-min(z_after));
-
-    all_centerlines(idx_t, 4) = z_after;
+    z_prev = z_original(idx(pos_in_tronco-1));
+    z_next = z_original(idx(pos_in_tronco+1));
+    all_centerlines(row, 4) = mean([z_prev, z_next]);
 end
 % Re-synchronise z_coords with all_centerlines(:,4) after the glitch cleaning,
 % otherwise slopes and hydraulics stay tied to the uncleaned version
@@ -1160,67 +1168,38 @@ if run_diagnostics
         disp(T)
     end
 
-    % Do the segments still oscillate? The test uses z_original, i.e. z_DTM
-    % BEFORE the isolated-glitch filter and before segments_to_smooth, so that
-    % it measures the raw signal and not the effect of the smoothing.
+    % Do the segments oscillate? Raw z_DTM (z_original, before the glitch
+    % correction) of the segments that oscillated before the nodata fix
+    % (19/11/2026) and of those with the largest raw jumps.
     %   roughness  standard deviation of z around its moving median on 7 sections
-    %   Jump_raw   largest jump between consecutive sections
-    %   Jump_w7    largest jump after the moving median on 7 sections
-    % Outcome:
-    %   'no oscillation: smoothing not needed'   roughness < rough_tol and Jump_raw < 1 m
-    %   'oscillation: smoothing removes it'      otherwise, if Jump_w7 < 1 m
-    %   'TO BE INSPECTED MANUALLY'               otherwise
-    % (with the nodata of the segment DTMs converted to NaN, 19/11/2026, the
-    % roughness of these segments is 1-9 cm, as in the other segments)
+    %   Jump_raw   largest jump between consecutive sections (a step is not a glitch)
+    %   glitches   sections corrected by the glitch rule, largest |excess|
+    % Outcome: 'no oscillation' if roughness < rough_tol, otherwise
+    % 'TO BE INSPECTED MANUALLY' (an oscillation over several sections is not
+    % removed by the glitch rule).
     rough_tol = 0.20;   % [m]
-    smooth_list = [segments_to_smooth.segment];
-    tronchi_sospetti = unique([12 19 26 30 32 35 38 39, smooth_list]);
-
-    fprintf('\nSegments with suspected oscillation of z_DTM (raw z, before filter and smoothing)\n');
-    fprintf('%-8s %-10s %-11s %-10s %-9s %-14s %s\n', 'Segment', 'in_list', 'roughness', 'Jump_raw', 'Jump_w7', 'smooth_change', 'Outcome');
+    tronchi_sospetti = [0 12 19 26 30 32 34 35 37 38 39];
+    fprintf('\nSegments checked for oscillations of z_DTM (raw z)\n');
+    fprintf('%-8s %-11s %-10s %-9s %-12s %s\n', 'Segment', 'roughness', 'Jump_raw', 'glitches', 'max|excess|', 'Outcome');
     for t = tronchi_sospetti
         idx_t = find(all_centerlines(:,6) == t);
         if numel(idx_t) < 7, continue; end
-
         z0 = z_original(idx_t);
-        z_test = movmedian(z0, 7);
-        rough = std(z0 - z_test, 'omitnan');
-        salto_prima = max(abs(diff(z0)));
-        salto_dopo = max(abs(diff(z_test)));
-        % effect of the smoothing actually applied (if the segment is in the list)
-        k_s = find(smooth_list == t, 1);
-        if isempty(k_s)
-            in_list = 'no';  dz_smooth = 0;
+        rough = std(z0 - movmedian(z0, 7), 'omitnan');
+        ng = nnz(outlier_flags(idx_t));
+        mx = max([0; abs(glitch_excess(idx_t(outlier_flags(idx_t))))]);
+        if rough < rough_tol
+            esito = 'no oscillation';
         else
-            in_list = sprintf('yes (w=%d)', segments_to_smooth(k_s).window);
-            dz_smooth = max(abs(movmedian(z0, segments_to_smooth(k_s).window) - z0));
+            esito = 'TO BE INSPECTED MANUALLY (oscillation)';
         end
-
-        if rough < rough_tol && salto_prima < 1.0
-            esito = 'no oscillation: smoothing not needed';
-        elseif salto_dopo < 1.0
-            esito = 'oscillation: smoothing removes it';
-        else
-            esito = 'TO BE INSPECTED MANUALLY (other cause)';
-        end
-        fprintf('%-8d %-10s %-11.3f %-10.2f %-9.2f %-14.2f %s\n', t, in_list, rough, salto_prima, salto_dopo, dz_smooth, esito);
-    end
-    fprintf('smooth_change: largest change of z produced by the moving median of segments_to_smooth [m].\n');
-
-    for t = [32 35]
-        idx_t = find(all_centerlines(:,6) == t);
-        if numel(idx_t) < 2, continue; end
-        z0 = all_centerlines(idx_t, 4);
-        for w = [7 9 11]
-            z_test = movmedian(z0, w);
-            fprintf('Segment %d, w=%d: residual jump = %.2f m\n', t, w, max(abs(diff(z_test))));
-        end
+        fprintf('%-8d %-11.3f %-10.2f %-9d %-12.2f %s\n', t, rough, max(abs(diff(z0))), ng, mx, esito);
     end
 
     for t = [32 35]
         idx = find(all_centerlines(:,6) == t);
         if numel(idx) < 2, continue; end
-        dz = diff(all_centerlines(idx,4));   % raw z_coords, not smoothed yet, to see the original cause
+        dz = diff(z_original(idx));   % raw z_coords, before the glitch correction
         [max_dz, k] = max(abs(dz));
         row_prev = idx(k); row_next = idx(k+1);
         fprintf('\nSegment %d: max jump = %.2f m between ID %d and ID %d\n', t, dz(k), ...
@@ -1233,8 +1212,6 @@ if run_diagnostics
             'VariableNames', {'ID','width','slope','Q','h_rect','z_rect','is_bif','is_conf'});
         disp(T)
     end
-    % segment 32 only needs a wider smoothing window
-    % segment 35 needs to be checked individually
 
     % ID 168 is the start of segment 8: check whether it is registered as a confluence node
     match = find(conf_ids == 168);

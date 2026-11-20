@@ -37,10 +37,21 @@ Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
 
 *Domanda.* È coerente con l'impostazione del metodo (configurazione del nodo formata a bankfull, ritorno al volo solo per la ripartizione della portata)? Va presentato così nel paper?
 
-**6. Densità dei punti ADCP nella validazione.**
+**6. Dati ADCP: copertura dei transetti e peso nella validazione.**
 
-*Contesto.* Ai 48 transetti GNSS (rilievo a guado) si aggiungono 8 transetti ADCP dello stesso giorno (07/03/2025), che entrano nella validazione come stazioni come le altre, ognuna confrontata con la sua quota media. L'ADCP registra un punto ogni 0.1–0.3 m e resta fermo qualche secondo all'inizio dei transetti (49–271 punti per transetto); il GNSS ha un punto ogni 1.5 m circa (mediana 20 punti per stazione). Nelle statistiche calcolate su tutti i punti insieme (RMSE, errore medio) un transetto ADCP da 271 punti pesa quanto più di dieci stazioni GNSS.
+*Contesto: come si fa la validazione.* Il modello ricostruisce in ogni sezione un fondo piatto, cioè una sola quota per tutta la larghezza bagnata, ottenuta come pelo libero meno il tirante medio della sezione. Per confrontarlo con i dati, i punti di ogni sezione misurata (stazione) vengono mediati, e ogni punto è confrontato con la media della sua stazione. Il confronto funziona se la stazione copre la sezione da sponda a sponda: allora la sua media è il fondo medio della sezione, la stessa grandezza che il modello ricostruisce. Le 48 sezioni GNSS rilevate a guado fanno così.
 
-*Aggiornamento dal run del 19/11/2026.* Gli ADCP sono 8 stazioni su 59 ma il 51% dei punti, e pesano 5–6 stazioni GNSS anche nelle statistiche di gruppo con il bootstrap delle stazioni. Il loro residuo è 0.3–0.6 m più alto di quello delle stazioni GNSS vicine: i transetti ADCP coprono soprattutto le parti profonde, dove non si poteva guadare, quindi la loro media di stazione è più bassa della media della sezione intera con cui si confronta il fondo corretto. Con gli ADCP l'errore medio su tutte le stazioni sale da +0.22 a +0.33 m.
+*Contesto: il problema degli ADCP.* Ai dati GNSS si aggiungono 8 transetti ADCP dello stesso giorno (07/03/2025). L'ADCP è stato usato dove non si poteva guadare, quindi i transetti coprono soprattutto la parte profonda della sezione e non arrivano alle sponde, dove il fondo risale. La media di un transetto ADCP è quindi più bassa del fondo medio della sezione: confrontata con il fondo piatto del modello, dà un residuo più alto anche se modello e misure sono corretti.
 
-*Domanda.* Conviene diradare i punti ADCP a una spaziatura simile a quella dei GNSS (per esempio 1.5 m), oppure dare lo stesso peso a ogni stazione nelle statistiche, oppure tenere tutti i punti? Visto che coprono solo la parte profonda, conviene confrontarli con la media di stazione come le sezioni GNSS, tenerli separati, oppure usarli solo dove completano una sezione GNSS?
+- Le quote ADCP sono affidabili: nei punti vicini a punti GNSS concordano entro 4–9 cm.
+- Nel run del 19/11 il residuo medio delle stazioni ADCP è 0.3–0.6 m più alto di quello delle stazioni GNSS vicine (per esempio tratto 35: a06 +0.74 m contro s022 +0.05 m).
+- Con gli ADCP l'errore medio su tutte le stazioni sale da +0.22 a +0.33 m e l'RMSE da 0.30 a 0.40 m: è un effetto della copertura, non dell'accuratezza del modello.
+
+*Contesto: il peso dei punti.* L'ADCP registra un punto ogni 0.1–0.3 m e resta fermo qualche secondo all'inizio dei transetti (49–271 punti per transetto); il GNSS ha un punto ogni 1.5 m circa (mediana 20 punti per stazione). Gli 8 transetti sono il 14% delle stazioni ma il 51% dei punti, e le statistiche (RMSE, errore medio) sono calcolate sui punti: un transetto ADCP pesa quanto 5–6 stazioni GNSS, anche nel bootstrap delle stazioni.
+
+*Domanda.* Come conviene usare gli ADCP nella validazione?
+- (a) Tenerli insieme alle sezioni GNSS con la media di stazione, dichiarando l'effetto della copertura.
+- (b) Tenerli separati: validazione GNSS per il fondo medio della sezione, e un confronto a parte per gli ADCP (per esempio punto per punto, o solo sulla quota minima del fondo).
+- (c) Usarli solo dove completano una sezione GNSS vicina (la parte profonda che non si poteva guadare), per ottenere sezioni complete da sponda a sponda.
+
+E per il peso: diradare i punti ADCP a una spaziatura simile a quella dei GNSS (circa 1.5 m), dare lo stesso peso a ogni stazione nelle statistiche, oppure tenere tutti i punti?

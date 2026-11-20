@@ -41,9 +41,11 @@ forced_confluences = zeros(0, 3);
 % system), do not compute their depth and leave the raw DTM there.
 no_flow_segments = [15 16 29];
 
-% Targeted smoothing of segments with systematic oscillation of z
-segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
-                            'window', {7,  7,  7,  7,  7,  7,  9});
+% Isolated glitches of z_DTM: a section that is a local extremum and departs
+% from the mean of its two neighbours by more than max(glitch_tol, 3*robust
+% spread of the segment) is replaced by that mean (same rule for every
+% segment; replaces the manual list segments_to_smooth, removed 20/11/2026)
+glitch_tol = 0.20;          % [m]
 
 %% Validation (field points: GNSS cross-sections by wading + ADCP transects)
 % Each ADCP transect is a station (a01, a02, ...) treated like a GNSS cross-section.
@@ -53,12 +55,17 @@ segments_to_smooth = struct('segment', {12, 19, 26, 30, 38, 39, 32}, ...
 adcp_min_spacing = 0;
 % GNSS cross-sections that cross more than one segment: split into sub-stations
 % (sNNN-tCC), one per segment, each compared with the mean of its own points.
-% {station, first point, last point, segment code}; s015 still to be defined.
+% {station, first point, last point, segment code}. A single row with all
+% the points assigns the whole cross-section to a segment by hand: s015 lies
+% at the bifurcation node 1070, in the gap between the end of the mother
+% segment 30 and the start of the branches 31 and 32, and is assigned to the
+% mother (its last section is the node section).
 gnss_station_split = {'s003',  1, 13,  9;
                       's003', 14, 21, 11;
                       's003', 22, 29, 12;
                       's007',  1, 16,  6;
-                      's007', 17, 25,  7};
+                      's007', 17, 25,  7;
+                      's015',  1, 41, 30};
 
 %% Hydraulic module
 g = 9.81;
