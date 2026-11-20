@@ -2,7 +2,7 @@
 
 **Elisa Caccamo** · 8 ottobre 2026
 
-> Versione Markdown del file `TeoriaMetodologica_moduli_idraulico_morfodinamico.docx`. Le equazioni sono state ricostruite in LaTeX a partire dal testo estratto; la figura del §4.3 non era presente nel testo ed è indicata come segnaposto.
+> Versione Markdown del file `TeoriaMetodologica_moduli_idraulico_morfodinamico.docx`. Le equazioni sono state ricostruite in LaTeX a partire dal testo estratto; la figura del §4.3 è stata reinserita il 20/11/2026 (`docs/fig/nodo_sezione_rettangolarizzata.png`).
 
 ---
 
@@ -292,8 +292,9 @@ $$
 
 Le larghezze dei rami nella sezione di imbocco possono quindi differire da quelle delle maschere, che vicino al nodo separano male i due rami; più a valle i rami usano la larghezza osservata. Il fondo dei rami resta la quota $\eta_i$ del nodo (non dipende dalla portata) e il tirante reale all'imbocco è $D_i=z_{DTM,i}-\eta_i$. Più a valle nei rami vale la logica del canale singolo ($Q_i$ costante, $D$ dal moto uniforme, $\eta=z_{DTM}-D$).
 
-> **[Figura]** *Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo.*
-> *(immagine non inclusa nella versione testuale del documento originale)*
+![Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo](fig/nodo_sezione_rettangolarizzata.png)
+
+*Figura – Sezione rettangolarizzata al nodo: bankfull equivalente, nodo, ritorno al volo.*
 
 Il pannello a mostra come la sezione madre diventa un rettangolo di pari area $A_0$ al livello bankfull, mentre $W_0^m$ è misurata al livello del volo. Il pannello b è il nodo risolto in bankfull, con pelo libero comune e tiranti $D_1$, $D_2$ incogniti. Il pannello c riporta i rami alle condizioni del volo: larghezze ridotte dello stesso fattore, fondi invariati, portate ripartite con $\psi$.
 
@@ -1149,6 +1150,7 @@ Il nodo è la testa della rete: la finestra a monte si ferma all'inizio del trat
 | 19/11/2026 | Tolta la §8 "Domande per Carlo": le domande aperte sono in `docs/Domande_per_Carlo.md`. Aggiunte la §9.9 (dati ADCP nella validazione, sottostazioni di s003 e s007) e in §9.1 il calcolo della larghezza bankfull al nodo verificato sul codice. §9.4: aggiornati i punti 5, 9 e 10. Codice: `read_field_points.m` (nuova), `validation_gnss_mean.m`, `station_reach_class.m`, `gnss_cross_section_profiles.m`, i tre script principali e il config (`adcp_file`, `adcp_min_spacing`, `gnss_station_split`). |
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
 | 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
+| 20/11/2026 | Figura del §4.3 (sezione rettangolarizzata al nodo) inserita in `docs/fig/`, al posto del segnaposto. |
 | 20/11/2026 | Punto 21 deciso (soglia minima di $S_0$ al nodo di testa, dichiarata); piano della sensitività come domanda 8 a Carlo. |
 | 20/11/2026 | Run della sera (§9.14): punti 8 e 19 chiusi, nuovo punto 21 ($S_0$ al nodo di testa 13); biforcazione 0 → 1, 2 forzata nel config; commenti "Chezy's eq" corretti nel modulo idraulico. |
 | 20/11/2026 | Notazione della scabrezza allineata al codice: solo $n$ di Manning (Gauckler–Strickler $k_s=1/n$), Chézy tolto dal testo; legame $C=R^{1/6}/n$ nel §3. |
