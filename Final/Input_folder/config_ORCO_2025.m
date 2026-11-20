@@ -70,9 +70,12 @@ gnss_station_split = {'s003',  1, 13,  9;
 %% Hydraulic module
 g = 9.81;
 n_manning = 0.03;           % Manning's coefficient
-% LiDAR flight 17/03/2025
-Q_upstream = 10.8;          % Discharge SAN BENIGNO ORCO [m^3/s]
-level_upstream = 0.695;     % Water level SAN BENIGNO ORCO [m] from most recent (2023) rating curve
+% LiDAR flight 17/03/2025, San Benigno (ARPA Piemonte): daily level 0.97 m,
+% published daily discharge 10.76 m^3/s, consistent with the rating curve
+% valid 01/01-16/04/2025 (10.9 m^3/s at 0.97 m). The 2023 rating curve is not
+% valid in 2025 (levels about 0.2 m higher for the same discharge).
+Q_upstream = 10.76;         % Discharge SAN BENIGNO ORCO [m^3/s]
+level_upstream = 0.97;      % Water level SAN BENIGNO ORCO [m]; used only as initial guess of fsolve at the bifurcations of the hydraulic module
 slope_min = 1.6e-4;         % minimum slope assigned to a river segment
 
 %% Morphodynamic module
