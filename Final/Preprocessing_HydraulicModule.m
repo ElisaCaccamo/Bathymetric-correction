@@ -790,9 +790,9 @@ for k = 1:n_points
                 F = @(x) [
                     % 1. Discharge conservation
                     x(1) + x(2) - Q_map(i);
-                    % 2. Chezy's eq 1
+                    % 2. Uniform flow (Manning) in branch 1
                     x(1) - (1/n_manning) * width1 * x(3)^(5/3) * sqrt(slope1);
-                    % 3. Chezy's eq 2
+                    % 3. Uniform flow (Manning) in branch 2
                     x(2) - (1/n_manning) * width2 * x(4)^(5/3) * sqrt(slope2);
                     % 4. Bernoulli
                     x(3) + x(1)^2 / (2 * g * (width1 * x(3))^2) ...

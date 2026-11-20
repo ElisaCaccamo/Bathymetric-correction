@@ -27,7 +27,8 @@ segments_to_flip = {'000','006','015','018','019','022','023','024','025', ...
 % Bifurcations not found automatically (bridges): one row per bifurcation
 % [bifurcating_branch branch1 branch2]
 forced_bifurcations = [35 34 36;
-                       37 38 39];
+                       37 38 39;
+                       0  1  2];   % 0 -> 1, 2: mask of segment 0 cut before the bridge shadow (20/11/2026), end of 0 at 61-68 m from the branches (> distance_threshold)
 
 % Confluences not found automatically: one row per confluence
 % [branch1 branch2 merging_branch]
