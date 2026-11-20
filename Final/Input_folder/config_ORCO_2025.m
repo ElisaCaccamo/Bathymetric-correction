@@ -42,9 +42,10 @@ forced_confluences = zeros(0, 3);
 no_flow_segments = [15 16 29];
 
 % Isolated glitches of z_DTM: a section that is a local extremum and departs
-% from the mean of its two neighbours by more than max(glitch_tol, 3*robust
-% spread of the segment) is replaced by that mean (same rule for every
-% segment; replaces the manual list segments_to_smooth, removed 20/11/2026)
+% from BOTH neighbours by more than max(glitch_tol, 3*robust spread of the
+% segment) is replaced by the mean of the neighbours (same rule for every
+% segment; replaces the manual list segments_to_smooth, removed 20/11/2026;
+% steps are never touched)
 glitch_tol = 0.20;          % [m]
 
 %% Validation (field points: GNSS cross-sections by wading + ADCP transects)

@@ -620,20 +620,25 @@ network_root = roots(1);
 % oscillates any more, and the moving median only removed a few isolated
 % spikes in the listed segments while flattening real downstream steps.
 %
-% Rule. For every interior section i of a segment:
-%   e_i = z_i - (z_{i-1} + z_{i+1})/2       (excess over the neighbours)
+% Rule (stricter version of 20/11/2026). For every interior section i of a
+% segment, with d1 = z_i - z_{i-1} and d2 = z_i - z_{i+1}:
 % section i is an isolated glitch if
-%   1) it is a local extremum: (z_i - z_{i-1})*(z_i - z_{i+1}) >= 0, so a
-%      step (z_i between its neighbours) is never touched, and
-%   2) |e_i| > max(glitch_tol, 3*sigma_e), with sigma_e = 1.4826*MAD(e) of the
-%      segment (robust spread of the excess: in a noisier segment only the
-%      outliers are corrected).
+%   1) it is a strict local extremum: d1*d2 > 0, and
+%   2) it departs from BOTH neighbours by more than the threshold:
+%      min(|d1|, |d2|) > max(glitch_tol, 3*sigma_e), with
+%      e_i = z_i - (z_{i-1} + z_{i+1})/2 and sigma_e = 1.4826*MAD(e) of the
+%      segment (robust spread: in a noisier segment only the outliers are
+%      corrected).
+% Condition 2 on both sides leaves the steps untouched, including the foot of
+% a step followed by a small counter-slope (section 492 in the first version
+% of the rule, which only required |e_i| > threshold) and a jump at the end
+% of a segment whose last section is a copy of the previous one (section 14).
 % A glitch is replaced by the mean of its two raw neighbours. The test and
 % the replacement use the raw values (z_original), so that a correction does
 % not propagate to the neighbouring sections.
-% With the 19/11/2026 data and glitch_tol = 0.20 m the rule corrects 4
-% sections: 14 (segment 0, +0.55 m), 492 (segment 19, -0.38 m), 728
-% (segment 26, +0.38 m), 1239 (segment 35, +0.53 m).
+% With the 20/11/2026 data and glitch_tol = 0.20 m the rule corrects 2
+% sections: 728 (segment 26, +0.36/+0.39 m from the neighbours) and 1239
+% (segment 35, +0.55/+0.51 m).
 z_original = all_centerlines(:,4);   % raw z_DTM, snapshot before the correction
 outlier_flags = false(height(all_centerlines), 1);
 glitch_excess = nan(height(all_centerlines), 1);
@@ -644,12 +649,13 @@ for t = tronchi_uniq'
     if numel(z) < 5, continue; end
     e = nan(size(z));
     e(2:end-1) = z(2:end-1) - (z(1:end-2) + z(3:end)) / 2;
-    is_ext = false(size(z));
-    is_ext(2:end-1) = (z(2:end-1) - z(1:end-2)) .* (z(2:end-1) - z(3:end)) >= 0;
+    d1 = nan(size(z));  d2 = nan(size(z));
+    d1(2:end-1) = z(2:end-1) - z(1:end-2);
+    d2(2:end-1) = z(2:end-1) - z(3:end);
     ei = e(2:end-1);
     sigma_e = 1.4826 * median(abs(ei - median(ei, 'omitnan')), 'omitnan');
     soglia = max(glitch_tol, 3 * sigma_e);
-    out = is_ext & abs(e) > soglia;
+    out = (d1 .* d2 > 0) & (min(abs(d1), abs(d2)) > soglia);
     outlier_flags(idx(out)) = true;
     glitch_excess(idx(out)) = e(out);
 end
