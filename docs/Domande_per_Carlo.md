@@ -13,11 +13,11 @@ Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
 - (b) Nessuna classe: differenza tra i moduli in funzione della distanza dal nodo a monte (11 stazioni).
 - (c) Le quattro classi attuali, cioè canale singolo (37 stazioni), a valle di una biforcazione (5), a valle di una confluenza (1), altri tratti a canali multipli (5), riportate solo come descrizione: RMSE ed errore medio per classe, senza intervalli di confidenza né test statistici, perché con 1–5 stazioni non sarebbero significativi.
 
-**2. Coefficiente $\theta^*_{BF}=1.62\,\theta^*_c$ e sponde basse.**
+**2. Coefficiente $`\theta^*_{BF}=1.62\,\theta^*_c`$ e sponde basse.**
 
-*Contesto.* Il tirante bankfull della madre è il tirante di Shields $D_S=1.62\,\theta^*_c\Delta d_{50}/S_0$, limitato dal livello di sfioro del transetto e mai sotto il tirante critico $D_c=\theta^*_c\Delta d_{50}/S_0$ (§9.1). Nel run del 18/11 sera il limite che decide è: tirante critico (sponde più basse di $D_c$) in 5 madri su 10, Shields pieno in 2, livello di sfioro in 3. La fonte del coefficiente 1.62 non è documentata; un riferimento possibile è Parker et al. (2007), che esprimono la geometria bankfull dei fiumi ghiaiosi a canale singolo tramite il rapporto tra Shields bankfull e Shields critico.
+*Contesto.* Il tirante bankfull della madre è il tirante di Shields $`D_S=1.62\,\theta^*_c\Delta d_{50}/S_0`$, limitato dal livello di sfioro del transetto e mai sotto il tirante critico $`D_c=\theta^*_c\Delta d_{50}/S_0`$ (§9.1). Nel run del 18/11 sera il limite che decide è: tirante critico (sponde più basse di $D_c$) in 5 madri su 10, Shields pieno in 2, livello di sfioro in 3. La fonte del coefficiente 1.62 non è documentata; un riferimento possibile è Parker et al. (2007), che esprimono la geometria bankfull dei fiumi ghiaiosi a canale singolo tramite il rapporto tra Shields bankfull e Shields critico.
 
-*Domanda.* Da quale riferimento viene 1.62? Vale per un fiume ghiaioso a canali multipli come l'Orco, o conviene calibrare $\theta^*_{BF}$ sulle sezioni a canale singolo con sponde ben definite? Limitare il tirante con il livello di sfioro è un criterio accettabile?
+*Domanda.* Da quale riferimento viene 1.62? Vale per un fiume ghiaioso a canali multipli come l'Orco, o conviene calibrare $`\theta^*_{BF}`$ sulle sezioni a canale singolo con sponde ben definite? Limitare il tirante con il livello di sfioro è un criterio accettabile?
 
 **3. Portata bankfull non coerente lungo la rete.**
 
@@ -78,8 +78,8 @@ Se (a): chi può fornire i dettagli della correzione 2019?
 | Portata del volo | 10.76 m³/s | ±10% (9.7, 11.8) | incertezza della scala di deflusso |
 | Passo tra le sezioni `dx` | 10 m | 5, 20 m | discretizzazione |
 | Soglia dei salti isolati `glitch_tol` | 0.20 m | 0.10, 0.30 m | pre-processing di $z_{DTM}$ |
-| $\theta^*_{BF}/\theta^*_c$ (`bankfull_factor`) | 1.62 | 1.2, 2.0 | fonte non documentata (domanda 2) |
-| $\theta^*_c$ | 0.030 | 0.045 | soglia di moto |
+| $`\theta^*_{BF}/\theta^*_c`$ (`bankfull_factor`) | 1.62 | 1.2, 2.0 | fonte non documentata (domanda 2) |
+| $`\theta^*_c`$ | 0.030 | 0.045 | soglia di moto |
 | Coefficiente di Ikeda $r$ | 0.65 | 0.4, 0.9 | flusso laterale al nodo |
 | Lunghezza delle celle $\alpha$ | 4 | 2, 6 | modello a due celle |
 | Larghezza al nodo | bankfull dal DTM | maschera al volo | già provato il 18/11 (§9.3) |
@@ -88,3 +88,11 @@ Se (a): chi può fornire i dettagli della correzione 2019?
 | Regola di scelta della soluzione | più vicina a $\psi_{hyd}$ | alternative della domanda 4 | equilibri multipli |
 
 *Domanda.* Approvi parametri, intervalli e metriche? Ci sono parametri da aggiungere o da togliere? Basta variare un parametro alla volta, oppure servono combinazioni (per esempio $n$ insieme alla portata, che agiscono entrambe sul tirante)?
+
+**9. Modifiche al metodo al nodo: da rivedere.**
+
+*Contesto.* Rispetto alla formulazione iniziale (§4.3 del documento di teoria) il trattamento delle biforcazioni nel modulo morfodinamico è cambiato in cinque punti: tirante bankfull della madre limitato dalle sponde e mai sotto il tirante critico; pendenza della madre $S_0$ da una retta sul pelo libero a monte del nodo; tirante per le larghezze dei rami calcolato con $S_0$; sistema del nodo nella forma BRT a 6 equazioni, con pendenza di equilibrio $S_b$ incognita e senza la chiusura $\eta_0=(\eta_1+\eta_2)/2$; ritorno al volo con il fondo dei rami dal moto uniforme (larghezza della maschera, pendenza del tratto) invece che dalla quota $\eta_i$ del nodo. Le domande 2, 4 e 5 riguardano singoli aspetti di queste modifiche.
+
+La §9.1 del documento di teoria ([Modifiche al metodo](TeoriaMetodologica_moduli_idraulico_morfodinamico.md#91-modifiche-al-metodo)) contiene la figura aggiornata del nodo (`fig/nodi_new.png`, da confrontare con `fig/nodi.png` del §4.3) e una tabella che riassume, per ciascuna modifica, la formulazione iniziale, il metodo attuale nel codice e il motivo del cambiamento.
+
+*Domanda.* Le modifiche sono coerenti con l'impostazione del metodo e con BRT / Ragno et al. (2023)? C'è qualcosa che cambieresti prima dell'analisi di sensitività?
