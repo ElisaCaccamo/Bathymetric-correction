@@ -10,6 +10,16 @@
 
 Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i punti aperti sono nella tabella della §9.4.
 
+**20/11/2026.** Analizzato il run del 19/11 (§9.10), con la correzione del nodata, i transetti ADCP e le sottostazioni di s003 e s007. I tre script girano senza errori.
+
+- **Correzione del nodata riuscita:** salti segnalati dal filtro da 149 a 2; sezioni alterne abbassate sparite; residui di s006, s019, s020 da −1.47, −0.77, −0.45 a −0.21, +0.27, −0.04 m.
+- **48 stazioni GNSS:** RMSE da 0.36 a 0.30 m in entrambi i moduli; errore medio da +0.12 a +0.22 m, ora l'errore dominante (punto 11). Moduli non distinguibili (+0.4 cm [−0.2, +1.2], test del segno 5 / 7 / 36, p = 0.77).
+- **ADCP:** residuo 0.3–0.6 m più alto delle stazioni GNSS vicine, per la copertura dei transetti (solo le parti profonde); pesano il 51% dei punti con il 14% delle stazioni.
+- **Sottostazioni:** nessuno dei due moduli riproduce il dislivello tra i rami di s003 e s007 (punto 16).
+- **Nodi:** 1369 torna asimmetrico; Bif 15 cambia soluzione per il cambio di $\psi_{hyd}$ (punti 1 e 4).
+- **Codice (20/11):** sottostazioni rinominate `sNNN-tCC` (niente pedici nelle figure); titoli e etichette "in situ" invece di "GNSS"; tabella diagnostica dei tratti sospetti ricalcolata su $z$ grezza, con rugosità ed effetto del lisciamento (punto 17).
+- **Da decidere:** `segments_to_smooth` e profilo monotono (punto 8); errore medio positivo (punto 11, livello idrometrico 7/3 contro 17/3); uso e peso degli ADCP (punto 5); dislivello tra rami come metrica (punto 16).
+
 **19/11/2026.** Analizzati i run del 18/11 sera (pre-processing + modulo idraulico, modulo morfodinamico, `ModuleComparison`) con la rete corretta: portata propagata solo dentro il tratto e tratti 15, 16, 29 senza portata (§9.8).
 
 - **Portata conservata ovunque:** 10.80 m³/s all'uscita in entrambi i moduli, nessun nodo sbilanciato. Punti 6 e 7 della §9.4 chiusi.
@@ -652,21 +662,23 @@ Questa tabella è l'elenco aggiornato di tutti i punti ancora aperti dei due mod
 
 | # | Punto | Stato | Prossimo passo |
 | --- | --- | --- | --- |
-| 1 | **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione al nodo (§9.3) | aperto; confermato dal run del 18/11 sera: a 1369 $\beta$ passa da 12.0 a 11.7 e il nodo diventa bilanciato (§9.8) | sponde cercate solo nel canale attivo che alimenta il nodo |
+| 1 | **Stima della larghezza bankfull**, che controlla il rapporto di forma $\beta$ e quindi il tipo di soluzione al nodo (§9.3) | aperto; il run del 19/11 lo conferma: con le nuove pendenze 1369 torna asimmetrico ($\beta$ da 11.7 a 14.9) e $\beta$ cambia di 2–5 a 205, 584, 1070, 1293 (§9.10) | sponde cercate solo nel canale attivo che alimenta il nodo; da mettere nell'analisi di sensitività |
 | 2 | **Sponde basse:** in 9 madri su 12 il tirante bankfull è quello critico (5 su 10 nel run del 18/11 sera); $\theta^*_{BF}=1.62\,\theta^*_c$ (fonte da documentare) | aperto | eventuale calibrazione sull'Orco |
 | 3 | **Portata bankfull calcolata localmente** a ogni nodo, non coerente lungo la rete (per esempio 584: 216 m³/s, il nodo 645 su un suo ramo: 481 m³/s) | aperto | — |
-| 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto (invariato nel run del 18/11 sera) | — |
-| 5 | **Dati ADCP** (8 transetti del 07/03/2025) | integrati nel codice il 19/11/2026 come stazioni a01–a08, senza distinzione dalle sezioni GNSS (§9.9) | rilanciare; densità dei punti ADCP in sospeso (domanda 6 a Carlo, `adcp_min_spacing` = 0) |
+| 4 | **Regola di scelta della soluzione:** nei nodi 205, 584 e 645 nessuna soluzione asimmetrica è vicina a $\psi_{hyd}$ | aperto; nel run del 19/11 la Bif 15 cambia soluzione ($\psi$ da 0.41 a 0.82) solo perché $\psi_{hyd}$ passa da 0.49 a 0.67 (§9.10) | domanda 4 a Carlo; da mettere nell'analisi di sensitività |
+| 5 | **Dati ADCP** (8 transetti del 07/03/2025) | integrati e girati il 19/11 (§9.10): residuo 0.3–0.6 m più alto delle stazioni GNSS vicine perché i transetti coprono soprattutto le parti profonde (effetto di copertura); 51% dei punti con 14% delle stazioni | decidere come entrano nella validazione (con la media di stazione, separati, o solo dove completano una sezione GNSS) e con quale peso (domanda 6 a Carlo) |
 | 6 | **Portata non conservata nel modulo idraulico:** il tratto 6 riceveva la portata del tratto 5 e da lì la rete portava 9.99 invece di 10.80 m³/s (§9.5) | **chiuso** (§9.8): bilancio chiuso a tutti i nodi in entrambi i moduli (sbilancio massimo 4.6·10⁻¹² m³/s), 10.80 m³/s all'uscita | — |
 | 7 | **Rami 16–15 e 29** (§9.7): nel modello tolgono portata alla rete; al volo sono quasi fermi (29 staccato dal tratto 22, 16–15 parte di un meandro bagnato solo in parte), mentre a portate più alte sono attivi | **chiuso per le condizioni del volo** (§9.8): 366 e 817 "branch without discharge" in entrambi i moduli; 127 559 pixel bagnati (6.4%) restano al DTM grezzo; nessuna stazione GNSS coinvolta | resta aperta, come estensione, la rete alla portata bankfull (limiti del paper) |
-| 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | causa confermata alla sezione 170 (§9.8): nodata dei DTM di segmento, propagato dal filtro sui salti. **Corretto nel codice il 19/11/2026** (§9.6, "Correzione adottata"): nodata −32767 → NaN alla lettura dei DTM di segmento, media della sezione sui soli valori non NaN | rilanciare il pre-processing e i due moduli; controllare salti segnalati, tratti di `segments_to_smooth` e $z_{DTM}$ a s006, s019, s020; poi decidere se serve il profilo monotono e se `segments_to_smooth` resta necessario |
-| 9 | **Stazioni GNSS su più tratti** s003, s007, s015, s035 | s003 (tratti 9, 11, 12) e s007 (tratti 6, 7) divise in sottostazioni assegnate a mano il 19/11/2026 (§9.9) | definire la divisione di s015 (screenshot di Elisa); verificare s035 (89% dei punti sul tratto 20) |
+| 8 | **Quota di partenza $z_{DTM}$** (§9.6): oscilla e in alcuni tratti è fino a 1.6 m più bassa del DTM completo; causa i forti residui negativi di s006, s019, s020 | **corretto e verificato** (§9.10): salti segnalati da 149 a 2, sezioni alterne abbassate sparite a s006, s019, s020; i tratti di `segments_to_smooth` non oscillano più (rugosità 1–9 cm, come gli altri) | decidere: (a) togliere `segments_to_smooth` (oggi toglie solo tre picchi isolati di 0.2–0.4 m nei tratti 12, 26, 32, mentre picchi simili restano nei tratti 34, 35, 37); (b) sostituirlo con una regola uguale per tutti i tratti; (c) profilo monotono per le poche risalite verso valle (10–55 cm). Salto di +1.1 m in fondo al tratto 0 (sezione 14) da guardare |
+| 9 | **Stazioni GNSS su più tratti** s003, s007, s015, s035 | s003 (tratti 9, 11, 12) e s007 (tratti 6, 7) divise in sottostazioni, assegnate al tratto giusto nel run del 19/11 (§9.9–9.10) | definire la divisione di s015 (screenshot di Elisa); verificare s035 (89% dei punti sul tratto 20) |
 | 10 | **Classi delle stazioni:** con la nuova rete 37 stazioni su 48 sono nel canale singolo; restano 5 a valle di una biforcazione, 1 a valle di una confluenza, 5 negli altri tratti a canali multipli, con intervalli molto larghi (§9.8) | in attesa della risposta di Carlo (domanda 1) | due classi, distanza dal nodo, o quattro classi solo descrittive; i numeri cambiano con le stazioni ADCP e le sottostazioni |
-| 11 | **Errore sistematico positivo** del DTM corretto: sceso a +0.12 m (per punto) dopo i punti 6 e 7; +0.15–0.16 m senza s006, +0.30 m negli altri tratti a canali multipli (§9.8) | aperto | rivedere dopo il punto 8; poi scabrezza (n = 0.03 costante) e larghezze della maschera nei rami stretti |
-| 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`: RMSE, errore medio, mediana e NMAD con intervallo per stazione, riduzione dell'RMSE rispetto al DTM grezzo e differenza tra i moduli con intervallo appaiato | nel paper riportare questi intervalli al posto di quelli di `validation_gnss_mean.m` (vedi PaperBAT, 5.5) |
-| 13 | **Confronto dei due moduli da ripetere** (§9.5) | ripetuto dopo i punti 6 e 7 (§9.8): differenza non significativa | ripetere dopo il punto 8 |
-| 14 | **Test del segno e parità:** `compare_modules_gnss.m` (righe 111–112 e 170–171) conta come vittorie le stazioni con RMSE uguale nei due moduli a meno di 10⁻¹¹ (37 su 48), che finiscono a HM o a MM per rumore di arrotondamento; nel log risulta "MM migliore in 9/48, p = 4·10⁻⁵". La colonna `MM_minus_HM_cm` della tabella delle stazioni è la differenza dell'errore medio, non dell'RMSE | **corretto nel codice** (19/11/2026): `opts.tie_tol` = 1 mm (impostato in `ModuleComparison.m`); `closer` vale MM, HM o `tie`; colonne `dRMSE_MM_HM_cm` (differenza di RMSE) e `dME_MM_HM_cm` (differenza dell'errore medio, ex `MM_minus_HM_cm`); `n_ties` nella tabella dei gruppi; barre grigie per le parità nel pannello B. Con i CSV del 18/11 sera: MM più vicino in 3, HM in 8, 37 pari, p ≈ 0.23 | rilanciare `ModuleComparison` e verificare che il log riporti 3 / 8 / 37 |
+| 11 | **Errore sistematico positivo** del DTM corretto: sceso a +0.12 m (per punto) dopo i punti 6 e 7; +0.15–0.16 m senza s006, +0.30 m negli altri tratti a canali multipli (§9.8) | **errore dominante** dopo la correzione di $z_{DTM}$: +0.22 m sulle 48 stazioni GNSS (+0.33 m con gli ADCP, per la loro copertura); stazioni più alte s045, s027, s041, s038 (+0.64/+0.70 m) (§9.10) | confrontare il livello idrometrico del rilievo GNSS (07/03, circa 86) con quello del volo (17/03, circa 97) e valutare se dichiarare o correggere l'offset; poi scabrezza ($n$ = 0.03) e larghezze della maschera |
+| 12 | **Intervalli di confidenza:** `validation_gnss_mean.m` ricampiona i punti, e gli intervalli che ne escono sono troppo stretti; quelli corretti ricampionano le stazioni | implementato in `ModuleComparison.m`; il run del 19/11 mostra però che anche lì RMSE ed errore medio di gruppo sono calcolati sui punti, quindi un transetto ADCP pesa come 5–6 stazioni GNSS | decidere se le statistiche di gruppo devono pesare le stazioni e non i punti (insieme alla domanda 6 a Carlo); nel paper riportare gli intervalli per stazione |
+| 13 | **Confronto dei due moduli da ripetere** (§9.5) | ripetuto dopo il punto 8 (§9.10): sulle 48 stazioni GNSS differenza +0.4 cm [−0.2, +1.2], test del segno 5 / 7 / 36, p = 0.77; non significativa con tutte le combinazioni di stazioni | decidere come presentarlo nel paper (classi: domanda 1 a Carlo) |
+| 14 | **Test del segno e parità:** `compare_modules_gnss.m` (righe 111–112 e 170–171) conta come vittorie le stazioni con RMSE uguale nei due moduli a meno di 10⁻¹¹ (37 su 48), che finiscono a HM o a MM per rumore di arrotondamento; nel log risulta "MM migliore in 9/48, p = 4·10⁻⁵". La colonna `MM_minus_HM_cm` della tabella delle stazioni è la differenza dell'errore medio, non dell'RMSE | **chiuso**: verificato il 19/11 sui CSV del 18/11 sera (MM 3 / HM 8 / 37 pari, p = 0.23) | — |
 | 15 | **Trasporto solido al volo praticamente nullo:** i flussi solidi di MM alla portata del volo sono 10⁻¹⁶–10⁻²¹ m³/s, quindi le ripartizioni $\psi_x$ al volo agiscono su quantità nulle | da verificare | confermare che è atteso (10.8 m³/s è molto sotto la soglia di moto) e dichiararlo: al volo il modulo morfodinamico agisce solo tramite $\psi$ |
+| 16 | **Dislivello tra i rami di uno stesso transetto** (sottostazioni di s003 e s007): nessuno dei due moduli lo riproduce; il dislivello modellato è dominato da $z_{DTM}$ dei rami (§9.10) | aperto | guardare $z_{DTM}$ dei tratti 6, 7, 12 vicino alle sezioni 133, 157, 269; decidere se il dislivello tra rami diventa una metrica del paper (è l'unico confronto diretto della ripartizione) |
+| 17 | **Anomalie minori di figure e log:** nomi delle sottostazioni resi come pedici TeX, titoli "GNSS" anche con gli ADCP, tabella diagnostica dei tratti che scriveva "apply smoothing" per tutti | **corretto nel codice il 20/11/2026**: sottostazioni `sNNN-tCC`, titoli "in situ" (GNSS + ADCP), tabella diagnostica calcolata su $z$ grezza con rugosità, salto massimo ed effetto del lisciamento | verificare al prossimo run |
 
 ### 9.5 Validazione GNSS: modulo idraulico e modulo morfodinamico
 
@@ -852,13 +864,60 @@ La causa 1 della §9.6 è confermata; le cause 2 (riempimento: DTM di segmento u
 
 | Stazione | Punti | Tratto | Sottostazione |
 | --- | --- | --- | --- |
-| s003 | p001–p013 | 9 | s003_t09 |
-| s003 | p014–p021 | 11 | s003_t11 |
-| s003 | p022–p029 | 12 | s003_t12 |
-| s007 | p001–p016 | 6 | s007_t06 |
-| s007 | p017–p025 | 7 | s007_t07 |
+| s003 | p001–p013 | 9 | s003-t09 |
+| s003 | p014–p021 | 11 | s003-t11 |
+| s003 | p022–p029 | 12 | s003-t12 |
+| s007 | p001–p016 | 6 | s007-t06 |
+| s007 | p017–p025 | 7 | s007-t07 |
 
 s015 è ancora da definire. s007 attraversa i due canali (tratti 6 e 7), separati da una barra centrale, che confluiscono nel tratto 8 dove si trova s006. Le sottostazioni dello stesso transetto misurano il fondo di rami diversi nello stesso punto della rete: confrontano direttamente il dislivello tra i rami, che dipende dalla ripartizione della portata. Un caso simile, ma con stazioni già separate, è quello di s046 (tratto 24) e s047 (tratto 26), che confluiscono nel tratto 27 dove si trova s048.
+
+### 9.10 Run del 19/11/2026: correzione del nodata, ADCP e sottostazioni
+
+Run dei tre script con la correzione del nodata di $z_{DTM}$ (§9.6), i transetti ADCP e le sottostazioni di s003 e s007 (§9.9). Nessun errore, comprese le funzioni nuove o modificate. Resoconto completo: `Final/Output_folder/RESOCONTO.md` (in locale); output del run precedente in `Output_folder/_run_18-11_sera/`.
+
+**Effetto della correzione del nodata.** Il filtro sui salti isolati segnala 2 sezioni invece di 149 (la 14, salto di +1.1 m in fondo al tratto 0, e la 1239 del tratto 35, +0.55 m). I salti oltre 0.5 m tra sezioni consecutive passano da 106 a 4. La quota grezza della sezione cambia solo verso l'alto (68 sezioni oltre +5 cm). Alle sezioni di s006, s019 e s020 le sezioni alterne abbassate sono sparite: $z_{DTM}$ coincide con il DTM completo sull'asse entro 4 cm (7 cm alla 172).
+
+| Stazione | Sezione | $z_{DTM}$ 18/11 | $z_{DTM}$ 19/11 | DTM completo | Residuo medio 18/11 → 19/11 (m) |
+| --- | --- | --- | --- | --- | --- |
+| s006 | 170 | 253.90 | 255.47 | 255.46 | −1.47 → −0.21 |
+| s019 | 1160 | 232.28 | 233.45 | 233.46 | −0.77 → +0.27 |
+| s020 | 1176 | 232.01 | 232.62 | 232.62 | −0.45 → −0.04 |
+
+**`segments_to_smooth`.** Senza lisciamento i sette tratti della lista (12, 19, 26, 30, 32, 38, 39) non oscillano più: la loro rugosità ($z$ grezza meno la sua mediana mobile su 7 sezioni) è 1–9 cm, come negli altri tratti (mediana 2.9 cm). Il lisciamento cambia $z$ di al massimo 4–13 cm, tranne tre picchi isolati che toglie: tratto 26 (+0.38 m alla terza sezione), tratto 32 (0.26 m) e tratto 12 (0.21 m). Picchi simili restano nei tratti fuori dalla lista: 34 (salto massimo 0.41 m), 35 (0.55 m), 37 e 0. La lista manuale non corrisponde più a un criterio: decisione al punto 8 della §9.4.
+
+**Rete e nodi.** Portata conservata a tutti i nodi, 10.80 m³/s all'uscita, 127 559 pixel non corretti come prima. La correzione cambia le pendenze dei tratti e quindi le grandezze bankfull:
+
+- 1369 torna asimmetrico ($\beta$ da 11.7 a 14.9; tirante bankfull da 4.01 a 2.77 m; portata bankfull da 1118 a 638 m³/s), ma la soluzione scelta ($\psi$ = 0.230) è praticamente la bilanciata (0.235);
+- Bif 15 cambia soluzione: $\psi$ da 0.41 a 0.82 perché $\psi_{hyd}$ passa da 0.49 a 0.67; nel modulo morfodinamico il ramo 1 passa da 4.47 a 8.82 m³/s;
+- $\beta$ cambia di 2–5 a 205, 584, 1070 e 1293; il tirante bankfull è critico in 5 madri su 10, come prima.
+
+**Validazione, 48 stazioni GNSS originali** (confronto diretto con la §9.8; m, intervalli dal bootstrap delle stazioni):
+
+| | 18/11 sera | 19/11 |
+| --- | --- | --- |
+| RMSE HM / MM | 0.36 / 0.36 | **0.30 [0.23–0.36] / 0.30 [0.23–0.37]** |
+| RMSE senza s006 | 0.30 / 0.30 | 0.30 / 0.30 |
+| Errore medio HM / MM | +0.12 / +0.12 | **+0.22 / +0.22** |
+| Mediana / NMAD (HM) | +0.14 / 0.19 | +0.18 / 0.15 |
+| Riduzione dell'RMSE rispetto al grezzo (HM) | +0.24 [+0.11, +0.34] | +0.30 [+0.28, +0.33] |
+| RMSE MM − HM | +0.004 [−0.001, +0.009] | +0.004 [−0.002, +0.012] |
+| Test del segno MM / HM / pari | 3 / 8 / 37, p = 0.23 | 5 / 7 / 36, p = 0.77 |
+
+Il guadagno di RMSE viene tutto dalle stazioni che avevano $z_{DTM}$ sbagliata. L'errore medio sale perché prima le sezioni abbassate dal nodata compensavano in parte l'errore positivo: ora l'errore sistematico è l'errore dominante (punto 11 della §9.4).
+
+**Sottostazioni e ADCP.** Con le 51 stazioni GNSS (sottostazioni comprese) i numeri globali non cambiano (RMSE 0.30, errore medio +0.22, differenza tra i moduli +0.5 cm [−0.1, +1.2]). Con tutte le 59 stazioni (ADCP compresi) l'RMSE sale a 0.40 m e l'errore medio a +0.33 m.
+
+- **ADCP.** Il residuo delle stazioni ADCP è 0.3–0.6 m più alto di quello delle stazioni GNSS vicine (per esempio a02 +0.61 contro s009 +0.14; a06 +0.74 contro s022 +0.05), mentre la quota ADCP dista 4–9 cm da quella dei punti GNSS vicini. Causa: i transetti ADCP coprono soprattutto le parti profonde della sezione, non guadabili, e non la sezione da sponda a sponda; la loro media di stazione è quindi più bassa della media di sezione con cui si confronta il fondo corretto. È un effetto di copertura, non un errore della quota ADCP né del modello. Inoltre gli ADCP sono 8 stazioni su 59 ma 1001 punti su 1957: anche le statistiche di gruppo di `compare_modules_gnss.m`, che ricampionano le stazioni ma calcolano RMSE ed errore medio sui punti, pesano un transetto ADCP come 5–6 stazioni GNSS.
+- **Sottostazioni.** I moduli non riproducono il dislivello tra i rami di uno stesso transetto. s003: il ramo 12 è 0.40–0.63 m sotto i rami 9 e 11 nei GNSS, ma alla stessa quota o più alto nei modelli (residuo +0.46 / +0.43 m). s007: i due canali sono alla stessa quota nei GNSS (dislivello +0.02 m), mentre i modelli tengono il gradino di 0.6 m del DTM grezzo tra i tratti 6 e 7 (+0.63 HM, +0.75 MM). Il dislivello modellato è dominato da $z_{DTM}$ dei due rami, cioè dal pelo libero, più che dalla ripartizione della portata.
+
+**Conclusioni.**
+
+1. La correzione del nodata risolve il punto 8 per la parte delle oscillazioni: restano da decidere il lisciamento e il profilo monotono (le risalite verso valle oltre 10 cm sono poche: tratti 35, 34, 37, 0 e 22, di 10–55 cm).
+2. Con $z_{DTM}$ corretta l'RMSE sulle 48 stazioni GNSS è 0.30 m in entrambi i moduli, e l'errore dominante è sistematico e positivo (+0.22 m).
+3. I due moduli restano non distinguibili con tutte le combinazioni di stazioni (differenza +0.2/+0.5 cm, test del segno p = 0.45–0.77).
+4. Gli ADCP vanno usati tenendo conto della loro copertura: confrontati con la media di stazione aumentano l'errore medio per un effetto di copertura, non di accuratezza.
+5. Il dislivello tra i rami di uno stesso transetto è l'unico confronto diretto della ripartizione tra i rami, e nessuno dei due moduli lo riproduce.
 
 ---
 
@@ -877,6 +936,7 @@ s015 è ancora da definire. s007 attraversa i due canali (tratti 6 e 7), separat
 | 18/11/2026 | §9.7 e punto 7 della §9.4: aggiunte le osservazioni sul campo sui rami 16–15 e 29 (quasi fermi al volo, attivi a portate più alte). |
 | 18/11/2026 | §9.7: scelte adottate per i rami 15, 16 e 29 (portata nulla, fondo non ricostruito, nessun sistema del nodo), implementate in `Final`. §9.4: aggiornati i punti 7, 10 e 12. |
 | 19/11/2026 | Aggiunta in testa la sezione "Stato del lavoro" (resoconto per giornata). Aggiunta la §9.8: risultati dei run del 18/11 sera con la rete corretta (bilancio di portata, nodi, validazione GNSS, confronto dei moduli, verifica di $z_{DTM}$ alla sezione 170). §9.4: chiusi i punti 6 e 7, aggiornati 1, 2, 4, 8, 10, 11, 13; nuovi punti 14 (parità nel test del segno) e 15 (trasporto al volo nullo). Nota in testa alla §9.5 e verifica in §9.6. |
+| 20/11/2026 | Stato del 20/11; nuova §9.10 (run del 19/11: correzione del nodata, ADCP, sottostazioni); §9.4: aggiornati i punti 1, 4, 5, 8, 9, 11, 12, 13, 14 (chiuso), nuovi 16 e 17. Codice: sottostazioni `sNNN-tCC`, titoli "in situ", tabella diagnostica dei tratti sospetti su $z$ grezza. |
 | 19/11/2026 | Tolta la §8 "Domande per Carlo": le domande aperte sono in `docs/Domande_per_Carlo.md`. Aggiunte la §9.9 (dati ADCP nella validazione, sottostazioni di s003 e s007) e in §9.1 il calcolo della larghezza bankfull al nodo verificato sul codice. §9.4: aggiornati i punti 5, 9 e 10. Codice: `read_field_points.m` (nuova), `validation_gnss_mean.m`, `station_reach_class.m`, `gnss_cross_section_profiles.m`, i tre script principali e il config (`adcp_file`, `adcp_min_spacing`, `gnss_station_split`). |
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
 | 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
