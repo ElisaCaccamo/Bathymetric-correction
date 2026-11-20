@@ -55,3 +55,15 @@ Per ognuna: il contesto, la domanda, e dove serve le opzioni considerate.
 - (c) Usarli solo dove completano una sezione GNSS vicina (la parte profonda che non si poteva guadare), per ottenere sezioni complete da sponda a sponda.
 
 E per il peso: diradare i punti ADCP a una spaziatura simile a quella dei GNSS (circa 1.5 m), dare lo stesso peso a ogni stazione nelle statistiche, oppure tenere tutti i punti?
+
+## 20/11/2026
+
+**7. Volo 2019 e DTM corretto del 2019 nel paper.**
+
+*Contesto.* Il lavoro usa il LiDAR 2025 (volo del 17/03/2025). Esiste anche un DTM del 2019 con la batimetria già corretta da altri autori. La correzione dovrebbe essere basata sulla stessa teoria del modulo idraulico (moto uniforme), ma i dettagli non sono ancora documentati: portata al volo, scabrezza, sezioni, ripartizione ai nodi, validazione. L'idea è usarlo solo per un breve paragrafo qualitativo: evoluzione dell'alveo tra il 2019 e il 2025 e dimostrazione delle potenzialità del metodo applicato a più anni. Non sarebbe una baseline.
+
+*Domanda.* Il volo 2019 e il suo DTM corretto entrano nel paper? Se sì, come:
+- (a) Solo il paragrafo qualitativo, con il DoD 2025 − 2019 e i limiti dichiarati (correzioni fatte da autori diversi).
+- (b) Nessun confronto in questo paper: il multi-temporale resta uno sviluppo futuro, citato nelle conclusioni.
+
+Se (a): chi può fornire i dettagli della correzione 2019?
