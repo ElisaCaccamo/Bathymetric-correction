@@ -10,3 +10,10 @@ Written by the scripts; the content is not versioned (see `.gitignore`), only th
 | `04_Validation/HydraulicModule/` | `validation_gnss_mean.m` (called by `Preprocessing_HydraulicModule.m`) | `gnss_validation_mean_records.csv`, `gnss_validation_mean_metrics.csv`, `gnss_validation_mean.png` |
 | `04_Validation/MorphodynamicModule/` | `validation_gnss_mean.m` (called by `MorphodynamicModule.m`) | same files as above, for the morphodynamic DTM |
 | `04_Validation/ModuleComparison/` | `ModuleComparison.m` | `discharge_balance_nodes.csv`, `discharge_balance_segments.csv`, `GNSS_stations_reach_class.csv`, `GNSS_module_comparison_stations.csv`, `GNSS_module_comparison_groups.csv`, `GNSS_module_comparison.png`, `GNSS_station_assignment.png`, `DTM_difference_MM_minus_HM.tif`, `DTM_difference_MM_minus_HM.png`, `DTM_difference_MM_minus_HM_stats.csv`, `GNSS_cross_section_profiles.png`, `GNSS_cross_section_profiles_sections.csv` |
+
+Only the outputs of the most recent run are kept here (older runs are not archived). In the root of this folder:
+
+| File | Content |
+| --- | --- |
+| `log_01_HM.txt`, `log_02_MM.txt`, `log_03_comparison.txt` | console logs of the three scripts of the most recent run |
+| `RESOCONTO.md` | single run report (in Italian): next steps first, then one section per run, newest first; details in `docs/TeoriaMetodologica_moduli_idraulico_morfodinamico.md` (§9) |
