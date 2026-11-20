@@ -127,7 +127,7 @@ La portata di monte proviene dalle stazioni idrometriche (Spineto, San Benigno) 
 
 ## 3. Modulo idraulico
 
-Il modulo idraulico ricava il tirante $h$ di ogni sezione rettangolare dal moto uniforme (Chezy/Manning) con la portata liquida propagata da monte, e pone $\eta=z_{DTM}-h$. Non c'è trasporto solido: l'unico vincolo di rete è la conservazione della portata liquida, più la continuità dell'energia nei nodi di biforcazione.
+Il modulo idraulico ricava il tirante $h$ di ogni sezione rettangolare dal moto uniforme di Manning (forma di Gauckler–Strickler, $k_s=1/n$, $n=0.03$ costante) con la portata liquida propagata da monte, e pone $\eta=z_{DTM}-h$. Il coefficiente di Chézy non compare: è legato a $n$ da $C=R^{1/6}/n$ (con $R\approx h$ per sezione larga), quindi con $n$ costante $C$ cresce con il tirante (con $n=0.03$: $C\approx30$ m$^{1/2}$/s per $h=0.5$ m, $\approx36$ m$^{1/2}$/s per $h=1.5$ m). Non c'è trasporto solido: l'unico vincolo di rete è la conservazione della portata liquida, più la continuità dell'energia nei nodi di biforcazione.
 
 $$
 \eta = z_{DTM} - h
@@ -433,7 +433,7 @@ I trasporti $q_{s1x}$ e $q_{s2x}$ non sono costanti: dipendono da $D_1(\eta_1)$,
 
 La confluenza somma i flussi in entrata e non richiede un sistema non lineare:
 
-- Portata liquida: $Q_0=Q_1+Q_2$; il tirante $D_0$ si ricava da Chezy/Manning invertita e $\eta_0=z_{DTM}-D_0$.
+- Portata liquida: $Q_0=Q_1+Q_2$; il tirante $D_0$ si ricava da Manning invertita e $\eta_0=z_{DTM}-D_0$.
 - Flussi solidi totali per classe: $Q_{s,x}=f_{1x}\,q_{s1x}\,W_1+f_{2x}\,q_{s2x}\,W_2$.
 - Trasporto per unità di larghezza a valle: $q_{s0x}=Q_{s,x}/W_0$.
 - Composizione della superficie a valle: la frazione $f_F$ che, con la capacità di trasporto della sezione di valle, trasporta fine e grossolano nel rapporto dell'apporto (equazione sotto). Diventa la condizione di monte per il tratto successivo e per l'eventuale biforcazione seguente.
@@ -452,9 +452,9 @@ La differenza chiave è nel nodo di biforcazione: il modulo idraulico ripartisce
 
 | Sezione | Modulo idraulico | Modulo morfodinamico |
 | --- | --- | --- |
-| Canale singolo | Moto uniforme (Chezy/Manning) → $h$; $Q$ propagata invariata; $\eta=z_{DTM}-h$ | Moto uniforme → $D$; $\tau=\rho g D S$ → $q_{sC}$, $q_{sF}$ (Wilcock & Crowe); $Q$ e $Q_{s,x}$ propagati invariati |
-| Biforcazione | 4 eq. in ($h_1$, $h_2$, $Q_1$, $Q_2$): Chezy × 2, $Q_0=Q_1+Q_2$, Bernoulli; condizioni normali | 8 eq. in ($q_1$, $q_2$, $\eta_1$, $\eta_2$, $f_{1C}$, $f_{2C}$, $D_1$, $D_2$) ridotte a 4 in ($q_1$, $\eta_1$, $f_{1F}$, $f_{2F}$): nodo BRT con hiding, continuità liquida e solida, pelo libero comune, $\eta_0=(\eta_1+\eta_2)/2$; condizioni bankfull, poi riscalate; ritorno alle condizioni del volo con $\psi$ |
-| Confluenza | $Q_0=Q_1+Q_2$ → Chezy → $h_0$, $\eta_0$ | $Q_0=Q_1+Q_2$ → $D_0$, $\eta_0$; $Q_{s,x}$ sommati; $q_{s0x}=Q_{s,x}/W_0$; $f_F$ di equilibrio con la capacità di trasporto di valle |
+| Canale singolo | Moto uniforme (Manning) → $h$; $Q$ propagata invariata; $\eta=z_{DTM}-h$ | Moto uniforme → $D$; $\tau=\rho g D S$ → $q_{sC}$, $q_{sF}$ (Wilcock & Crowe); $Q$ e $Q_{s,x}$ propagati invariati |
+| Biforcazione | 4 eq. in ($h_1$, $h_2$, $Q_1$, $Q_2$): Manning × 2, $Q_0=Q_1+Q_2$, Bernoulli; condizioni normali | 8 eq. in ($q_1$, $q_2$, $\eta_1$, $\eta_2$, $f_{1C}$, $f_{2C}$, $D_1$, $D_2$) ridotte a 4 in ($q_1$, $\eta_1$, $f_{1F}$, $f_{2F}$): nodo BRT con hiding, continuità liquida e solida, pelo libero comune, $\eta_0=(\eta_1+\eta_2)/2$; condizioni bankfull, poi riscalate; ritorno alle condizioni del volo con $\psi$ |
+| Confluenza | $Q_0=Q_1+Q_2$ → Manning → $h_0$, $\eta_0$ | $Q_0=Q_1+Q_2$ → $D_0$, $\eta_0$; $Q_{s,x}$ sommati; $q_{s0x}=Q_{s,x}/W_0$; $f_F$ di equilibrio con la capacità di trasporto di valle |
 | Ingresso | $Q$ di stazione, $W$, $S$, $n$; pendenze $S$ calcolate nel pre-processing | Uscita del modulo idraulico, $d_{50}$, $\phi_C$, $\phi_F$, $f_{0C}$, $\Delta$, $r$, $\alpha$, $\theta_r$; pendenze $S$ calcolate nel pre-processing |
 | Uscita | $\eta$ su ogni sezione → DTM corretto | $\eta$ su ogni sezione, ripartizione dei flussi solidi, composizione $f_x$ dei rami → DTM corretto |
 
@@ -1110,6 +1110,7 @@ Riduzione dell'RMSE rispetto al DTM grezzo su A: +0.30 [+0.28, +0.33] m. Con s01
 | 19/11/2026 | Tolta la §8 "Domande per Carlo": le domande aperte sono in `docs/Domande_per_Carlo.md`. Aggiunte la §9.9 (dati ADCP nella validazione, sottostazioni di s003 e s007) e in §9.1 il calcolo della larghezza bankfull al nodo verificato sul codice. §9.4: aggiornati i punti 5, 9 e 10. Codice: `read_field_points.m` (nuova), `validation_gnss_mean.m`, `station_reach_class.m`, `gnss_cross_section_profiles.m`, i tre script principali e il config (`adcp_file`, `adcp_min_spacing`, `gnss_station_split`). |
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
 | 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $\theta^*_c$, $\theta^*_{BF}$, $\theta_{bf}/\theta^*_c$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
+| 20/11/2026 | Notazione della scabrezza allineata al codice: solo $n$ di Manning (Gauckler–Strickler $k_s=1/n$), Chézy tolto dal testo; legame $C=R^{1/6}/n$ nel §3. |
 | 20/11/2026 | Maschera del tratto 0 accorciata da Elisa; maschere dei tratti convertite in 0/1 dopo la lettura (`Preprocessing_HydraulicModule.m`). |
 | 20/11/2026 | Punto 19: la maschera del tratto 0 finisce sull'ombra di un ponte, Elisa la accorcia; s035 resta sul tratto 20; punto 9 chiuso. |
 | 20/11/2026 | Decisioni dopo il run: regola per i salti isolati più stretta (§9.6, codice); confronto con e senza pozze (§9.11); §9.4: punti 1, 8, 9 e 19 aggiornati (ponte a valle del tratto 0), nuovo punto 20 (baseline semplice). |
