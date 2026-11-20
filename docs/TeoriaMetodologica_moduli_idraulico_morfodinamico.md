@@ -10,7 +10,7 @@
 
 Resoconto breve per giornata, dal più recente. Il dettaglio è nella §9; i punti aperti sono nella tabella della §9.4.
 
-**20/11/2026, run della sera** (§9.14; resoconto in `Final/Output_folder/RESOCONTO.md`, run precedente in `_run_20-11/`). Run con la maschera del tratto 0 accorciata prima dell'ombra del ponte e la regola più stretta per i salti isolati. Nessun errore.
+**20/11/2026, run della sera** (§9.14; resoconto in `Final/Output_folder/RESOCONTO.md`). Run con la maschera del tratto 0 accorciata prima dell'ombra del ponte e la regola più stretta per i salti isolati. Nessun errore.
 
 - **Punto 8 chiuso:** la regola corregge solo le due sezioni attese (ex 728 ed ex 1239, ora 726 e 1237), con gli stessi valori; la 492 (ora 490) resta al valore grezzo.
 - **Punto 19 chiuso:** la risalita a fine tratto 0 è sparita (ultime 5 sezioni 260.10–260.02 m) e la pendenza del tratto 0 è quella della retta (2.0·10⁻⁴). Il tratto 0 accorciato finisce a 61–68 m dai tratti 1 e 2, oltre `distance_threshold` (51 m): la biforcazione 0 → 1, 2 è stata aggiunta a `forced_bifurcations` nel config.
@@ -871,7 +871,7 @@ La mappa delle differenze MM − HM (1 740 047 pixel corretti) ha media −0.001
 
 **Residui negativi forti e $z_{DTM}$.** I residui di s006 (−1.47 m), s019 (−0.77) e s020 (−0.45) non cambiano: non dipendevano dalla portata. Alle sezioni assegnate a queste stazioni $z_{DTM}$ è più bassa del DTM completo sull'asse di 1.56 m (170), 1.18 m (1160) e 0.61 m (1176), a sezioni alterne: dove $z_{DTM}$ è giusta coincide con il DTM completo entro 2–3 cm.
 
-Il controllo alla sezione 170 (`check_zDTM_section170.png`, `log_zDTM_check_170*.txt`) mostra il meccanismo:
+Il controllo alla sezione 170 mostra il meccanismo:
 
 1. Il DTM di segmento `dtm_008` contiene 141 870 pixel con il nodata −32767, non convertito in NaN. Alle sezioni 169 e 171 l'interpolazione bilineare vicino a questi pixel dà valori positivi ma falsi (211.91 e 107.50 m), che il filtro sui valori negativi non toglie e che abbassano la media di 1.32 e 1.84 m.
 2. La quota grezza della 170 è invece giusta (255.47 m).
@@ -1046,7 +1046,7 @@ La scala 2023 non vale per il 2025: a parità di portata il livello è circa 0.2
 
 ### 9.13 Run del 20/11/2026: regola unica per i salti isolati, s015, portata 10.76 m³/s
 
-Run dei tre script con la regola unica per i salti isolati (§9.6), s015 assegnata al tratto 30, i nomi `sNNN-tCC`, i titoli "in situ" e $Q$ = 10.76 m³/s (§9.12). Nessun errore. Riferimento: run del 19/11 (§9.10), salvato in `Output_folder/_run_19-11/`. Resoconto completo: `Final/Output_folder/RESOCONTO.md` (in locale).
+Run dei tre script con la regola unica per i salti isolati (§9.6), s015 assegnata al tratto 30, i nomi `sNNN-tCC`, i titoli "in situ" e $Q$ = 10.76 m³/s (§9.12). Nessun errore. Riferimento: run del 19/11 (§9.10). Resoconto completo: `Final/Output_folder/RESOCONTO.md` (in locale).
 
 **Regola per i salti isolati.** Corregge esattamente le 4 sezioni previste: 14 (+0.55 m), 492 (−0.38), 728 (+0.38), 1239 (+0.53). In tutte le altre 1560 sezioni $z_{DTM}$ coincide con la quota grezza. I gradini verso valle dei tratti 12, 32, 34 e 37 non sono toccati; i picchi dei tratti 26 e 35 sono tolti. Rispetto al 19/11 $z_{DTM}$ cambia di più di 5 cm in 22 sezioni, tutte nei tratti prima lisciati (12, 19, 30, 32, 39); il fondo del modulo idraulico segue $z_{DTM}$, i tiranti cambiano meno di 1 cm.
 
@@ -1127,7 +1127,7 @@ Il nodo è la testa della rete: la finestra a monte si ferma all'inizio del trat
 | 19/11/2026 | Correzione di $z_{DTM}$, primo passo: nodata dei DTM di segmento convertito in NaN (`Preprocessing_HydraulicModule.m`), media della sezione sui soli valori non NaN (`calculate_widths.m`). §9.6 ("Correzione adottata" e limite delle isole nella media), §9.4 punto 8, stato del 19/11. |
 | 19/11/2026 | Corretto `compare_modules_gnss.m` (parità escluse dal test del segno con `tie_tol` = 1 mm, colonne `dRMSE_MM_HM_cm` e `dME_MM_HM_cm`): §9.4 punto 14, §9.8, stato del 19/11. Corretto in §9.8 il conteggio delle stazioni (MM più vicino in 3, HM in 8). Aggiunti alla notazione (§1) $\beta$, $W_1/W_0$, $\psi_{hyd}$, $\psi_x$, $`\theta^*_c`$, $`\theta^*_{BF}`$, $`\theta_{bf}/\theta^*_c`$, con la guida alla lettura della tabella dei nodi in §9.8. La §8 diventa 8.1 (ottobre) e 8.2 (domande del 19/11/2026). |
 | 20/11/2026 | Figure del nodo rigenerate in LaTeX (`docs/fig/nodi.tex` → `nodi.png` nel §4.3, `docs/fig/nodi_new.tex` → `nodi_new.png` nel §9.1); tabella nel §9.1 su cosa è cambiato al nodo e perché; formule rese leggibili su GitHub (blocchi `math` al posto di `$$` e formule in linea tra `` $` `` e `` `$ `` dove contengono `\,`, `\_` o `*`). |
-| 20/11/2026 | Figura aggiornata del nodo nel §9.1 (`docs/fig/nodo_sezione_rettangolarizzata_v2.png`) e nota nel §4.3 su cosa è cambiato rispetto alla formulazione iniziale; punto 11 della §9.4 aggiornato. |
+| 20/11/2026 | Figura aggiornata del nodo nel §9.1 e nota nel §4.3 su cosa è cambiato rispetto alla formulazione iniziale; punto 11 della §9.4 aggiornato. |
 | 20/11/2026 | Figura del §4.3 (sezione rettangolarizzata al nodo) inserita in `docs/fig/`, al posto del segnaposto. |
 | 20/11/2026 | Punto 21 deciso (soglia minima di $S_0$ al nodo di testa, dichiarata); piano della sensitività come domanda 8 a Carlo. |
 | 20/11/2026 | Run della sera (§9.14): punti 8 e 19 chiusi, nuovo punto 21 ($S_0$ al nodo di testa 13); biforcazione 0 → 1, 2 forzata nel config; commenti "Chezy's eq" corretti nel modulo idraulico. |
